@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101214">
+<title>Pantau Udara — Jaringan Hexindo</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --baik:#00a651; --sedang:#0070c0; --tidak:#ffd400; --sangat:#e02020; --bahaya:#8b1a1a;
+  --oren:#ee6f00;
+  --bg:#0d0f11; --panel:#15191c; --panel2:#1c2126; --line:#2a3036;
+  --ink:#eef1f3; --dim:#8b949c;
+  box-sizing:border-box;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:1500px;margin:0 auto;padding:16px}
+
+/* ---------- header ---------- */
+header{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:rgba(13,15,17,.93); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.hd{max-width:1500px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;flex:1;min-width:230px}
+.brand h1{font-size:19px;font-weight:700;letter-spacing:-.2px}
+.brand .sub{font-size:12px;color:var(--dim)}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
+  font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.dot.on{background:var(--baik);box-shadow:0 0 0 4px rgba(0,166,81,.18)}
+.dot.off{background:var(--tidak);box-shadow:0 0 0 4px rgba(255,212,0,.15)}
+.dot.busy{background:var(--oren);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+button{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);
+  border-radius:9px;padding:8px 14px;cursor:pointer;transition:.15s}
+button:hover{background:var(--panel2);border-color:#3b434a}
+button.primary{background:var(--oren);border-color:var(--oren);color:#fff;font-weight:600}
+button.primary:hover{filter:brightness(1.1)}
+
+/* ---------- summary strip ---------- */
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden}
+.stat .n{font-size:30px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.stat .l{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.3}
+.stat .edge{position:absolute;left:0;top:0;bottom:0;width:4px}
+
+/* ---------- controls ---------- */
+.controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+input[type=search],select{font:inherit;color:inherit;background:var(--panel);
+  border:1px solid var(--line);border-radius:9px;padding:8px 12px}
+input[type=search]{flex:1;min-width:170px}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:8px 13px;font-size:13.5px}
+.seg button.sel{background:var(--oren);color:#fff;font-weight:600}
+
+/* ---------- cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  overflow:hidden;position:relative;transition:.18s;animation:rise .35s backwards}
+.card:hover{transform:translateY(-2px);border-color:#3b434a}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.card .bar{height:5px}
+.card .body{padding:13px 15px 15px}
+.row1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.nm{font-size:15.5px;font-weight:700;line-height:1.2}
+.ty{font-size:11px;color:var(--dim);margin-top:2px}
+.lvl{font-size:12px;font-weight:800;padding:3px 9px;border-radius:7px;white-space:nowrap}
+.big{display:flex;align-items:baseline;gap:9px;margin:11px 0 3px}
+.big .v{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.big .u{font-size:11.5px;color:var(--dim)}
+.cat{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;letter-spacing:.3px}
+.sub2{font-size:11.5px;color:var(--dim);margin-top:9px;line-height:1.5}
+.sub2 b{color:var(--ink);font-weight:600}
+.spark{display:block;width:100%;height:34px;margin-top:10px}
+.src{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}
+.tag.t1{border-color:var(--baik);color:#6fe0a4}
+.tag.t3{border-color:#5a6168}
+.manual{margin-top:10px;display:flex;gap:6px;align-items:center}
+.manual input{width:92px;font:inherit;background:var(--panel2);border:1px solid var(--line);
+  color:var(--ink);border-radius:7px;padding:5px 9px;font-size:13px}
+.manual label{font-size:10.5px;color:var(--dim);flex:1;line-height:1.3}
+
+/* ---------- notes ---------- */
+.note{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--oren);
+  border-radius:10px;padding:13px 16px;margin:18px 0;font-size:13px;color:var(--dim);line-height:1.6}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--sangat)}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.legend span{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px}
+footer{margin:26px 0 10px;font-size:11.5px;color:var(--dim);line-height:1.7;
+  border-top:1px solid var(--line);padding-top:14px}
+.skel{height:168px;border-radius:14px;background:linear-gradient(100deg,var(--panel) 30%,var(--panel2) 50%,var(--panel) 70%);
+  background-size:220% 100%;animation:sh 1.3s infinite}
+@keyframes sh{to{background-position:-220% 0}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.brand h1{font-size:17px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd">
+    <div class="brand">
+      <h1>Pantau Udara</h1>
+      <span class="sub">Jaringan Hexindo · Sumatera &amp; Kalimantan</span>
+    </div>
+    <span class="pill"><span class="dot" id="netDot"></span><span id="netTxt">memeriksa…</span></span>
+    <span class="pill" id="stamp">—</span>
+    <button id="refresh" class="primary">Perbarui</button>
+    <button id="csv">Unduh CSV</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="strip" id="strip"></div>
+
+  <div class="controls">
+    <input type="search" id="q" placeholder="Cari lokasi, provinsi, atau stasiun…">
+    <div class="seg" id="segPulau">
+      <button data-v="" class="sel">Semua</button>
+      <button data-v="Kalimantan">Kalimantan</button>
+      <button data-v="Sumatera">Sumatera</button>
+    </div>
+    <select id="sort">
+      <option value="ispu">Urut: ISPU tertinggi</option>
+      <option value="nama">Urut: nama lokasi</option>
+      <option value="pulau">Urut: pulau lalu ISPU</option>
+    </select>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="note" id="methodNote">
+    <b>Cara angka ini dihitung.</b> Aplikasi mengambil konsentrasi PM2,5 dan PM10 dari Open-Meteo Air Quality
+    (gratis, tanpa kunci API), lalu mengubahnya menjadi <b>ISPU-setara</b> memakai tabel batas
+    PermenLHK No. 14 Tahun 2020 — parameter kritis diambil dari nilai tertinggi antara PM2,5 dan PM10,
+    sama seperti cara KLH menghitung. Nilai US AQI ditampilkan sebagai padanan, bukan sebagai dasar keputusan.<br><br>Untuk nilai di atas batas tabel — konsentrasi di atas 500 µg/m³ — kemiringan pita terakhir dilanjutkan secara linier. Hasilnya bisa meleset beberapa persen dari angka ISPUnet, jadi untuk lokasi ekstrem gunakan angka resmi bila tersedia.
+  </div>
+
+  <div class="note warn">
+    <b>Yang perlu diketahui sebelum dipakai untuk keputusan kerja.</b>
+    Angka Open-Meteo berasal dari <b>model sebaran</b>, bukan stasiun pengukur di lokasi. Ini setara sumber
+    Tier 3 — cukup untuk peringatan dini dan untuk lokasi yang tidak punya stasiun sama sekali, tetapi
+    <b>bukan pengganti ISPU resmi</b> dan tidak berkekuatan regulasi. Bila stasiun KLH atau DLH tersedia,
+    masukkan angka resminya pada kolom di tiap kartu; angka itu akan menimpa hasil model dan ditandai Tier 1.
+    ISPU resmi memakai rata-rata 24 jam, sedangkan angka di sini per jam, sehingga lebih berfluktuasi.
+  </div>
+
+  <footer>
+    Sumber data daring: Open-Meteo Air Quality API (CC-BY 4.0) · Konversi ISPU: Peraturan Menteri Lingkungan Hidup dan Kehutanan No. 14 Tahun 2020 ·
+    Angka ISPU resmi dimasukkan manual oleh PIC lokasi dari aplikasi ISPUnet Kementerian Lingkungan Hidup.<br>
+    Aplikasi ini bahan rekomendasi QSHE. Keputusan penerapan di tiap lokasi tetap pada manajemen.
+    Data terakhir tersimpan di perangkat ini dan tetap tampil saat luring.
+  </footer>
+</div>
+
+<script>
+/* ══════════════════ ISPU — PermenLHK No. 14 Tahun 2020 ══════════════════ */
+const BP = {
+  pm25: [[0,15.5,0,50],[15.6,55.4,51,100],[55.5,150.4,101,200],[150.5,250.4,201,300],[250.5,500,301,500]],
+  pm10: [[0,50,0,50],[51,150,51,100],[151,350,101,200],[351,420,201,300],[421,500,301,400],[501,600,401,500]]
+};
+function toIspu(x, jenis){
+  if (x == null || isNaN(x)) return null;
+  const t = BP[jenis];
+  for (const [xb,xa,ib,ia] of t)
+    if (x >= xb && x <= xa) return Math.round((ia-ib)/(xa-xb)*(x-xb)+ib);
+  // Di atas batas tabel, kemiringan pita terakhir dilanjutkan secara linier — cara yang sama
+  // dipakai ISPUnet untuk menghasilkan angka ribuan. Hasilnya bisa berbeda beberapa persen
+  // dari angka resmi karena pembulatan dan rata-rata 24 jam yang dipakai KLH.
+  const [xb,xa,ib,ia] = t[t.length-1];
+  return Math.round((ia-ib)/(xa-xb)*(x-xb)+ib);
+}
+const BANDS = [
+  {max:50,   key:"baik",   nama:"BAIK",               warna:"#00a651", teks:"#fff"},
+  {max:100,  key:"sedang", nama:"SEDANG",             warna:"#0070c0", teks:"#fff"},
+  {max:200,  key:"tidak",  nama:"TIDAK SEHAT",        warna:"#ffd400", teks:"#141414"},
+  {max:300,  key:"sangat", nama:"SANGAT TIDAK SEHAT", warna:"#e02020", teks:"#fff"},
+  {max:1e9,  key:"bahaya", nama:"BERBAHAYA",          warna:"#111111", teks:"#fff"}
+];
+const band = v => v == null ? {key:"none",nama:"BELUM ADA DATA",warna:"#3a4147",teks:"#8b949c"} : BANDS.find(b=>v<=b.max);
+const LEVEL = v => v == null ? "—" : v<=100 ? "H1" : v<=200 ? "H2" : v<=300 ? "H3" : "H4";
+const LEVEL_TXT = {H1:"Operasi normal + pantau", H2:"Batasi kerja fisik berat", H3:"Hanya pekerjaan esensial", H4:"Kurangi beban & paparan"};
+
+/* ══════════════════ keadaan ══════════════════ */
+const KEY_DATA = "hexindo.udara.data.v1";
+const KEY_MAN  = "hexindo.udara.manual.v1";
+let LOK = [], HASIL = [], MANUAL = {}, filterPulau = "", cari = "", urut = "ispu";
+
+const simpan = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+const baca   = (k,d) => { try{ const r = localStorage.getItem(k); return r ? JSON.parse(r) : d; }catch(e){ return d; } };
+
+/* ══════════════════ ambil data ══════════════════ */
+const API = "https://air-quality-api.open-meteo.com/v1/air-quality";
+async function ambilSatu(l){
+  const u = `${API}?latitude=${l.lat}&longitude=${l.lon}`
+          + `&current=pm10,pm2_5,us_aqi&hourly=pm2_5,pm10`
+          + `&past_days=1&forecast_days=1&timezone=Asia%2FBangkok`;
+  const r = await fetch(u, {cache:"no-store"});
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  const pm25 = j.current?.pm2_5, pm10 = j.current?.pm10;
+  const i25 = toIspu(pm25,"pm25"), i10 = toIspu(pm10,"pm10");
+  let ispu = null, kritis = "—";
+  if (i25 != null || i10 != null){
+    ispu = Math.max(i25 ?? -1, i10 ?? -1);
+    kritis = (i25 ?? -1) >= (i10 ?? -1) ? "PM2,5" : "PM10";
+  }
+  // riwayat 24 jam untuk grafik mini
+  const H = j.hourly?.time || [], P25 = j.hourly?.pm2_5 || [], P10 = j.hourly?.pm10 || [];
+  const now = j.current?.time;
+  let end = H.indexOf(now); if (end < 0) end = H.length - 1;
+  const seri = [];
+  for (let i = Math.max(0, end-23); i <= end; i++){
+    const a = toIspu(P25[i],"pm25"), b = toIspu(P10[i],"pm10");
+    seri.push((a==null&&b==null) ? null : Math.max(a ?? -1, b ?? -1));
+  }
+  return {...l, pm25, pm10, ispu, kritis, usAqi: j.current?.us_aqi ?? null, seri, jam: now};
+}
+async function ambilSemua(){
+  setNet("busy","mengambil data…");
+  const out = [];
+  for (let i = 0; i < LOK.length; i += 6){
+    const blok = LOK.slice(i, i+6);
+    const hasil = await Promise.allSettled(blok.map(ambilSatu));
+    hasil.forEach((h,k) => out.push(h.status === "fulfilled" ? h.value
+      : {...blok[k], ispu:null, pm25:null, pm10:null, usAqi:null, seri:[], galat:true}));
+    HASIL = out.slice(); render();
+  }
+  const paket = {waktu: new Date().toISOString(), data: out};
+  simpan(KEY_DATA, paket);
+  HASIL = out; stampDari(paket.waktu, false);
+  setNet("on","daring");
+  render();
+}
+
+/* ══════════════════ tampilan ══════════════════ */
+function setNet(mode, txt){
+  const d = document.getElementById("netDot");
+  d.className = "dot " + (mode === "on" ? "on" : mode === "busy" ? "busy" : "off");
+  document.getElementById("netTxt").textContent = txt;
+}
+function stampDari(iso, luring){
+  const t = new Date(iso);
+  const jam = t.toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+  const selisih = Math.round((Date.now() - t.getTime())/3600000);
+  document.getElementById("stamp").textContent =
+    (luring ? "Tersimpan " : "Ditarik ") + jam + (selisih >= 1 ? ` · ${selisih} jam lalu` : "");
+}
+function spark(seri){
+  const v = seri.filter(x => x != null);
+  if (v.length < 3) return "";
+  const mx = Math.max(...v), mn = Math.min(...v), rng = (mx-mn) || 1;
+  const W = 260, Hh = 34;
+  const pts = seri.map((y,i) => y == null ? null
+    : [ (i/(seri.length-1))*W, Hh - 3 - ((y-mn)/rng)*(Hh-7) ]).filter(Boolean);
+  const d = pts.map((p,i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const area = d + ` L${W} ${Hh} L0 ${Hh} Z`;
+  const w = band(seri[seri.length-1]).warna;
+  return `<svg class="spark" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" aria-hidden="true">
+    <path d="${area}" fill="${w}" opacity=".16"></path>
+    <path d="${d}" fill="none" stroke="${w}" stroke-width="2" stroke-linejoin="round"></path></svg>`;
+}
+function efektif(r){
+  const m = MANUAL[r.id];
+  return (m != null && m !== "") ? {nilai:+m, tier:1} : {nilai:r.ispu, tier:3};
+}
+function render(){
+  // ringkasan
+  const eff = HASIL.map(efektif).map(e => e.nilai).filter(v => v != null);
+  const bahaya = eff.filter(v => v > 300).length, sangat = eff.filter(v => v > 200 && v <= 300).length;
+  const tertinggi = eff.length ? Math.max(...eff) : null;
+  const lokMax = HASIL.find(r => efektif(r).nilai === tertinggi);
+  const resmi = Object.values(MANUAL).filter(v => v !== "" && v != null).length;
+  const S = [
+    [HASIL.length, "lokasi dipantau", "#3a4147"],
+    [bahaya, "lokasi kategori Berbahaya", "#111111"],
+    [sangat, "lokasi Sangat Tidak Sehat", "#e02020"],
+    [tertinggi ?? "—", "ISPU tertinggi" + (lokMax ? " · " + lokMax.nama : ""), band(tertinggi).warna],
+    [resmi, "lokasi memakai ISPU resmi (Tier 1)", "#00a651"]
+  ];
+  document.getElementById("strip").innerHTML = S.map(([n,l,c]) =>
+    `<div class="stat"><span class="edge" style="background:${c}"></span>
+      <div class="n">${typeof n === "number" ? n.toLocaleString("id-ID") : n}</div>
+      <div class="l">${l}</div></div>`).join("");
+
+  document.getElementById("legend").innerHTML = BANDS.map(b =>
+    `<span style="background:${b.warna};color:${b.teks}">${b.nama}</span>`).join("");
+
+  // saring & urutkan
+  let d = HASIL.filter(r => (!filterPulau || r.pulau === filterPulau));
+  if (cari){
+    const s = cari.toLowerCase();
+    d = d.filter(r => (r.nama+r.provinsi+r.stasiunIspu+r.tipe).toLowerCase().includes(s));
+  }
+  const nilai = r => efektif(r).nilai ?? -1;
+  if (urut === "ispu") d.sort((a,b) => nilai(b) - nilai(a));
+  else if (urut === "nama") d.sort((a,b) => a.nama.localeCompare(b.nama,"id"));
+  else d.sort((a,b) => a.pulau.localeCompare(b.pulau) || nilai(b) - nilai(a));
+
+  document.getElementById("grid").innerHTML = d.map((r,i) => {
+    const e = efektif(r), b = band(e.nilai), lv = LEVEL(e.nilai);
+    const fmt = x => x == null ? "—" : x.toLocaleString("id-ID",{maximumFractionDigits:1});
+    return `<article class="card" style="animation-delay:${Math.min(i*22,320)}ms">
+      <div class="bar" style="background:${b.warna}"></div>
+      <div class="body">
+        <div class="row1">
+          <div><div class="nm">${r.nama}</div><div class="ty">${r.tipe} · ${r.provinsi}</div></div>
+          <span class="lvl" style="background:${b.warna};color:${b.teks}">${lv}</span>
+        </div>
+        <div class="big"><span class="v" style="color:${b.key==='bahaya'?'#ff6b6b':b.warna}">${e.nilai ?? "—"}</span>
+          <span class="u">ISPU${e.tier===3?"-setara":" resmi"}</span></div>
+        <span class="cat" style="background:${b.warna};color:${b.teks}">${b.nama}</span>
+        ${spark(r.seri || [])}
+        <div class="sub2">
+          PM2,5 <b>${fmt(r.pm25)}</b> µg/m³ · PM10 <b>${fmt(r.pm10)}</b> µg/m³<br>
+          Parameter kritis <b>${r.kritis || "—"}</b> · US AQI padanan <b>${r.usAqi ?? "—"}</b><br>
+          Usulan tindakan: <b>${LEVEL_TXT[lv] || "menunggu data"}</b>
+        </div>
+        <div class="src">
+          <span class="tag ${e.tier===1?"t1":""}">${e.tier===1?"Tier 1 · ISPU resmi":"Tier 3 · model Open-Meteo"}</span>
+          <span class="tag">${r.stasiunIspu}</span>
+        </div>
+        <div class="manual">
+          <input type="number" inputmode="numeric" placeholder="ISPU resmi"
+                 data-id="${r.id}" value="${MANUAL[r.id] ?? ""}">
+          <label>Isi dari ISPUnet bila stasiun resmi tersedia — angka ini menimpa hasil model</label>
+        </div>
+      </div></article>`;
+  }).join("") || `<div class="note">Tidak ada lokasi yang cocok dengan saringan ini.</div>`;
+
+  document.querySelectorAll(".manual input").forEach(el => {
+    el.addEventListener("change", ev => {
+      const id = ev.target.dataset.id, v = ev.target.value.trim();
+      if (v === "") delete MANUAL[id]; else MANUAL[id] = v;
+      simpan(KEY_MAN, MANUAL); render();
+    });
+  });
+}
+
+/* ══════════════════ CSV ══════════════════ */
+function unduhCsv(){
+  const H = ["Lokasi","Tipe","Provinsi","Pulau","Stasiun ISPU","PM2.5 (ug/m3)","PM10 (ug/m3)",
+             "ISPU dipakai","Sumber","Parameter kritis","US AQI","Kategori","Level","Jam data"];
+  const baris = HASIL.map(r => {
+    const e = efektif(r);
+    return [r.nama,r.tipe,r.provinsi,r.pulau,r.stasiunIspu,r.pm25 ?? "",r.pm10 ?? "",
+            e.nilai ?? "", e.tier===1?"ISPU resmi (Tier 1)":"Model Open-Meteo (Tier 3)",
+            r.kritis ?? "", r.usAqi ?? "", band(e.nilai).nama, LEVEL(e.nilai), r.jam ?? ""];
+  });
+  // pemisah titik koma: aman untuk Excel yang memakai koma sebagai desimal
+  const csv = "\uFEFF" + [H,...baris].map(b =>
+    b.map(x => `"${String(x).replace(/"/g,'""').replace(/\./g, ",")}"`).join(";")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download = `pantau-udara-hexindo-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ══════════════════ mulai ══════════════════ */
+async function mulai(){
+  MANUAL = baca(KEY_MAN, {});
+  document.getElementById("grid").innerHTML =
+    Array.from({length:8}).map(()=>`<div class="skel"></div>`).join("");
+  try{
+    const r = await fetch("locations.json", {cache:"no-cache"});
+    LOK = (await r.json()).locations;
+  }catch(e){
+    const c = baca(KEY_DATA, null);
+    if (c) LOK = c.data; else {
+      document.getElementById("grid").innerHTML =
+        `<div class="note warn"><b>Daftar lokasi tidak terbaca.</b> Pastikan berkas locations.json berada di folder yang sama dengan index.html.</div>`;
+      return;
+    }
+  }
+  const simpanan = baca(KEY_DATA, null);
+  if (simpanan){ HASIL = simpanan.data; stampDari(simpanan.waktu, true); render(); }
+  else { HASIL = LOK.map(l => ({...l, ispu:null, seri:[]})); render(); }
+
+  if (navigator.onLine){ try{ await ambilSemua(); } catch(e){ setNet("off","gagal menarik data"); } }
+  else setNet("off","luring · menampilkan data tersimpan");
+}
+document.getElementById("refresh").onclick = () => navigator.onLine
+  ? ambilSemua().catch(() => setNet("off","gagal menarik data"))
+  : setNet("off","luring · tidak bisa memperbarui");
+document.getElementById("csv").onclick = unduhCsv;
+document.getElementById("q").oninput = e => { cari = e.target.value; render(); };
+document.getElementById("sort").onchange = e => { urut = e.target.value; render(); };
+document.querySelectorAll("#segPulau button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#segPulau button").forEach(x => x.classList.remove("sel"));
+  b.classList.add("sel"); filterPulau = b.dataset.v; render();
+});
+addEventListener("online",  () => { setNet("on","daring"); ambilSemua().catch(()=>{}); });
+addEventListener("offline", () => setNet("off","luring · menampilkan data tersimpan"));
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+mulai();
+</script>
+</body>
+</html>

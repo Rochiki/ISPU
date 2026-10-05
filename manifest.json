@@ -1,0 +1,15 @@
+{
+  "name": "Pantau Udara — Jaringan Hexindo",
+  "short_name": "Pantau Udara",
+  "description": "Pemantauan kualitas udara ISPU dan padanannya untuk seluruh lokasi operasional Hexindo di Sumatera dan Kalimantan.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d0f11",
+  "theme_color": "#0d0f11",
+  "orientation": "any",
+  "lang": "id",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
