@@ -1,410 +1,1138 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#101214">
-<title>Pantau Udara — Jaringan Hexindo</title>
+<title>Pantau Udara Hexindo</title>
+<meta name="description" content="Pemantauan kualitas udara harian untuk seluruh lokasi operasional PT Hexindo Adiperkasa Tbk.">
+<meta name="theme-color" content="#15191c">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
 :root{
-  --baik:#00a651; --sedang:#0070c0; --tidak:#ffd400; --sangat:#e02020; --bahaya:#8b1a1a;
-  --oren:#ee6f00;
-  --bg:#0d0f11; --panel:#15191c; --panel2:#1c2126; --line:#2a3036;
-  --ink:#eef1f3; --dim:#8b949c;
-  box-sizing:border-box;
+  --bg:#e3e8ea; --panel:#f6f8f8; --ink:#15191c; --mute:#56626a; --line:#c5cdd2; --soft:#d7dde0;
+  --pick:#6a3fb5; --pick-soft:#ece5f8;
+  --h1:#0070c0; --h2:#ffd400; --h3:#c00000; --h4:#000; --nd:#a9b1b6;
+  --baik:#00a651; --sedang:#0070c0; --tidak:#ffd400; --sangat:#c00000; --bahaya:#000;
+  --disp:"Bahnschrift","DIN Alternate","Roboto Condensed","Arial Narrow","Segoe UI",sans-serif;
+  --body:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{
-  background:var(--bg); color:var(--ink);
-  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
-  font-size:15px; line-height:1.5;
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
-  -webkit-text-size-adjust:100%;
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:120px}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--pick);outline-offset:2px}
+h1,h2,h3{font-family:var(--disp);font-stretch:85%;margin:0;line-height:1.15;letter-spacing:.005em}
+h1{font-size:clamp(26px,4.2vw,44px);font-weight:700}
+h2{font-size:clamp(21px,2.6vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:600}
+p{margin:0 0 .7em;max-width:74ch}
+.num{font-family:var(--disp);font-stretch:85%;font-variant-numeric:tabular-nums}
+
+/* ---------- bilah atas ---------- */
+.bar{position:sticky;top:0;z-index:30;background:var(--ink);color:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 18px 10px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand svg{width:34px;height:34px;flex:none}
+.brand b{font:700 20px/1 var(--disp);font-stretch:85%;display:block}
+.brand span{font-size:12.5px;color:#b9c3c9}
+.datebox{display:flex;align-items:stretch;gap:4px}
+.bar button,.bar input[type=date]{background:#262c30;border:1px solid #3b444a;color:#fff;border-radius:4px;min-height:38px;padding:0 11px}
+.bar input[type=date]{color-scheme:dark;font-family:var(--disp);font-size:16px;padding:0 8px}
+.bar button:hover{background:#333b40}
+.bar .step{width:38px;padding:0;font-size:20px;line-height:1}
+.lang{display:flex}
+.lang button{border-radius:0;min-width:44px}
+.lang button:first-child{border-radius:4px 0 0 4px}
+.lang button:last-child{border-radius:0 4px 4px 0;border-left:0}
+.lang button[aria-pressed=true]{background:#fff;color:var(--ink);border-color:#fff;font-weight:700}
+.bar .primary{background:#fff;color:var(--ink);border-color:#fff;font-weight:700}
+.bar .primary:hover{background:#dfe5e8}
+.bar .primary[disabled]{opacity:.6;cursor:progress}
+.status{background:#262c30;color:#d5dce0;font-size:13px;padding:6px 18px;display:flex;flex-wrap:wrap;gap:4px 18px}
+.status .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#58d28a;margin-right:6px;vertical-align:baseline}
+.status .dot.off{background:#f0a23a}
+.status .err{color:#ffb4a8}
+.tabs{position:sticky;top:58px;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 12px;overflow-x:auto}
+.tabs a{padding:10px 12px;color:var(--mute);text-decoration:none;font-weight:600;white-space:nowrap;border-bottom:3px solid transparent}
+.tabs a:hover{color:var(--ink)}
+
+main{max-width:1320px;margin:0 auto;padding:22px 18px 60px}
+section{margin-bottom:44px}
+.lead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 16px;margin-bottom:14px}
+.lead p{margin:0;color:var(--mute)}
+.badge{display:inline-block;font-size:13px;font-weight:600;padding:3px 9px;border-radius:3px;background:var(--ink);color:#fff}
+.badge.partial{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.badge.forecast{background:repeating-linear-gradient(135deg,#fff 0 6px,#e8ebed 6px 12px);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+.panel + .panel{margin-top:16px}
+.panel > h3{margin-bottom:4px}
+.hint{color:var(--mute);font-size:13.5px;margin:0 0 10px}
+.empty{padding:36px 18px;text-align:center;color:var(--mute)}
+.empty b{display:block;color:var(--ink);font:700 20px var(--disp);margin-bottom:6px}
+
+/* ---------- peta ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.mapbox{padding:0;overflow:hidden}
+.maptools{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:center}
+.chipbtn{background:#fff;border:1px solid var(--line);border-radius:3px;padding:5px 10px;font-size:13.5px}
+.chipbtn[aria-pressed=true]{background:var(--pick);border-color:var(--pick);color:#fff;font-weight:600}
+.maptools .sp{margin-left:auto}
+.mapwrap{position:relative;width:100%;aspect-ratio:960/380;background:#cfdde4}
+.mapwrap > *{position:absolute;inset:0;width:100%;height:100%;display:block}
+.land-o{fill:#dfe4e2}
+.land-i{fill:#f3f1e8;stroke:#9aa6a3;stroke-width:.6;vector-effect:non-scaling-stroke}
+.mk{cursor:pointer}
+.mk circle.core{stroke:#fff;stroke-width:1.6;vector-effect:non-scaling-stroke;paint-order:stroke}
+.mk circle.rim{fill:none;stroke:rgba(21,25,28,.55);stroke-width:.8;vector-effect:non-scaling-stroke}
+.mk .pulse{fill:none;stroke-width:2;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center;animation:pulse 2.2s ease-out infinite}
+.mk.sel circle.rim{stroke:var(--pick);stroke-width:3.5}
+.mk text{font-family:var(--disp);font-weight:600;paint-order:stroke;stroke:#f6f8f8;stroke-linejoin:round;fill:var(--ink);pointer-events:none}
+@keyframes pulse{0%{transform:scale(1);opacity:.85}100%{transform:scale(3.2);opacity:0}}
+.maplegend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 12px;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.key{display:inline-flex;align-items:center;gap:6px}
+.sw{width:13px;height:13px;border-radius:2px;display:inline-block;box-shadow:inset 0 0 0 1px rgba(21,25,28,.35)}
+
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{border-radius:5px;padding:10px 12px;color:#fff;position:relative;min-height:92px;border:0;text-align:left;width:100%}
+.tile .lv{font:700 15px var(--disp)}
+.tile .ct{font:700 40px/1 var(--disp);font-stretch:85%;display:block;margin-top:4px}
+.tile .dl{font-size:12.5px;opacity:.92}
+.tile.H1{background:var(--h1)} .tile.H2{background:var(--h2);color:var(--ink)} .tile.H3{background:var(--h3)} .tile.H4{background:var(--h4)}
+.tile[aria-pressed=true]{outline:3px solid var(--pick);outline-offset:2px}
+.nodata{font-size:13px;color:var(--mute);margin:8px 0 0}
+.rank{list-style:none;margin:8px 0 0;padding:0}
+.rank li{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--soft);cursor:pointer}
+.rank li:first-child{border-top:0}
+.rank .nm{min-width:0}
+.rank .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.rank .bar2{height:5px;border-radius:2px;margin-top:3px;min-width:2px;box-shadow:inset 0 0 0 1px rgba(21,25,28,.3)}
+.rank .v{font:700 19px var(--disp)}
+
+.hx{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:24px;padding:0 6px;border-radius:3px;font:700 14px var(--disp);color:#fff}
+.hx.H1{background:var(--h1)} .hx.H2{background:var(--h2);color:var(--ink)} .hx.H3{background:var(--h3)} .hx.H4{background:var(--h4)}
+.hx.ND{background:transparent;color:var(--mute);box-shadow:inset 0 0 0 1.5px var(--nd)}
+.cat{display:inline-block;padding:1px 7px;border-radius:3px;font-size:12.5px;font-weight:600;color:#fff;white-space:nowrap}
+.cat.baik{background:var(--baik)} .cat.sedang{background:var(--sedang)} .cat.tidak{background:var(--tidak);color:var(--ink)} .cat.sangat{background:var(--sangat)} .cat.bahaya{background:var(--bahaya)}
+.src{font-size:12px;color:var(--mute);white-space:nowrap}
+.src.resmi,.src.berkas{color:#0a6b3c;font-weight:700}
+
+/* ---------- grafik ---------- */
+.chart{width:100%;display:block;overflow:visible}
+.chart text{font:12px var(--body);fill:var(--mute)}
+.chart .ax{stroke:var(--line);stroke-width:1}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .hit:hover{fill:rgba(106,63,181,.10)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--mute);margin:0 0 6px}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.comp{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;font-size:14px}
+.comp .stack{display:flex;height:22px;border-radius:3px;overflow:hidden;background:var(--soft)}
+.comp .stack span{display:block;height:100%}
+.heatwrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.heat{border-collapse:separate;border-spacing:1px;font-size:12.5px;width:100%}
+.heat th{width:170px;position:sticky;left:0;background:#fff;text-align:left;font-weight:500;white-space:nowrap;padding:0 10px 0 8px;z-index:2;max-width:190px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.heat thead th,.heat thead td{position:sticky;top:0;background:#fff;z-index:3;font-size:11.5px;color:var(--mute);text-align:center;padding:4px 0;height:30px}
+.heat thead th{z-index:4;text-align:left;padding-left:8px}
+.heat td.c{width:17px;min-width:17px;height:17px;padding:0;cursor:pointer}
+.heat td.c.fc{opacity:.5}
+.heat td.c.on{box-shadow:0 0 0 2px var(--pick);position:relative;z-index:1}
+.heat thead td.on{color:var(--pick);font-weight:700}
+.heat tr.grp th{font:700 13px var(--disp);background:var(--soft);color:var(--ink);cursor:default}
+.heat tr.grp td{background:var(--soft)}
+
+/* ---------- daftar lokasi ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.filters select,.filters input[type=search],.btn{background:#fff;border:1px solid var(--line);border-radius:4px;min-height:38px;padding:0 10px}
+.filters input[type=search]{flex:1 1 180px;min-width:150px}
+.btn:hover{border-color:var(--ink)}
+.filters .sp{margin-left:auto}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table.lok{border-collapse:collapse;width:100%;min-width:980px}
+.lok th{font-size:12.5px;color:var(--mute);font-weight:600;text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+.lok td{padding:8px 10px;border-bottom:1px solid var(--soft);vertical-align:middle}
+.lok tr:last-child td{border-bottom:0}
+.lok tbody tr{cursor:pointer}
+.lok tbody tr:hover{background:#fff}
+.lok td.r,.lok th.r{text-align:right}
+.lok .nm b{font-weight:600}
+.lok .nm small{display:block;color:var(--mute);font-size:12.5px}
+.lok .big{font:700 20px var(--disp)}
+.lok .up{color:#a11d1d;font-size:12.5px} .lok .dn{color:#0a6b3c;font-size:12.5px} .lok .eq{color:var(--mute);font-size:12.5px}
+.man{width:78px;min-height:32px;border:1px solid var(--line);border-radius:4px;padding:0 6px;background:#fff;text-align:right}
+.man.filled{border-color:#0a6b3c;background:#eaf6ef;font-weight:700}
+
+/* ---------- panel rincian ---------- */
+.scrim{position:fixed;inset:0;background:rgba(21,25,28,.45);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--panel);z-index:50;transform:translateX(102%);transition:transform .22s ease-out;
+  overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 18px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:-8px 0 30px rgba(21,25,28,.25)}
+.drawer.open{transform:none}
+.drawer .x{position:sticky;top:0;float:right;background:var(--ink);color:#fff;border:0;border-radius:4px;min-height:36px;padding:0 12px;z-index:3}
+.drawer h2{margin:2px 60px 2px 0}
+.drawer .meta{color:var(--mute);font-size:13.5px;margin-bottom:12px}
+.headline{display:flex;align-items:center;gap:12px;margin:10px 0}
+.headline .hx{min-width:54px;height:54px;font-size:26px}
+.headline .n{font:700 46px/1 var(--disp);font-stretch:85%}
+.headline small{display:block;color:var(--mute);font-size:13px}
+.scene{position:relative;height:150px;border-radius:5px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(#bcd8ea,#e9f2f5 78%)}
+.scene.H2{background:linear-gradient(#cfcdae,#e7e1c6 78%)} .scene.H3{background:linear-gradient(#a98e70,#cdb694 78%)} .scene.H4{background:linear-gradient(#4f4238,#8a7460 78%)}
+.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.scene .haze{position:absolute;top:0;bottom:0;left:0;width:200%;animation:drift linear infinite;
+  background:radial-gradient(60px 26px at 8% 60%,rgba(120,104,88,.9),transparent 70%),radial-gradient(90px 34px at 24% 42%,rgba(140,124,104,.8),transparent 70%),
+  radial-gradient(70px 30px at 41% 68%,rgba(120,104,88,.85),transparent 70%),radial-gradient(60px 26px at 58% 60%,rgba(120,104,88,.9),transparent 70%),
+  radial-gradient(90px 34px at 74% 42%,rgba(140,124,104,.8),transparent 70%),radial-gradient(70px 30px at 91% 68%,rgba(120,104,88,.85),transparent 70%),
+  linear-gradient(rgba(130,112,94,.55),rgba(150,132,110,.8))}
+.scene .haze.b{animation-direction:reverse;filter:blur(3px)}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.cap{font-size:12.5px;color:var(--mute);margin:5px 0 12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:5px;overflow:hidden;margin:10px 0 14px}
+.stats div{background:#fff;padding:8px 10px}
+.stats small{display:block;color:var(--mute);font-size:12.5px}
+.stats b{font:600 18px var(--disp)}
+.drawer h3{margin:16px 0 4px}
+.ctl{margin:0;padding-left:18px}
+.ctl li{margin-bottom:4px}
+.manrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.manrow .man{width:110px;min-height:40px;font-size:17px}
+.also{font-size:13.5px;color:var(--mute)}
+
+.method{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.method .panel{margin-top:0}
+.method ul{margin:0;padding-left:18px}
+.method li{margin-bottom:5px}
+.lvltbl{border-collapse:collapse;width:100%;font-size:14px}
+.lvltbl td,.lvltbl th{padding:6px 8px;border-bottom:1px solid var(--soft);text-align:left;vertical-align:top}
+footer{color:var(--mute);font-size:13px;border-top:1px solid var(--line);padding-top:14px}
+
+@media (max-width:1020px){ .hero{grid-template-columns:1fr} .hero > div{display:contents} .hero .panel{margin-top:0;order:3} .hero .mapbox{order:1} .hero .p-tiles{order:2} .hero .p-comp{order:4} }
+@media (max-width:720px){
+  .bar{padding-left:12px;padding-right:12px}
+  .brand span{display:none}
+  .tabs{top:104px}
+  main{padding:16px 12px 50px}
+  .tblwrap{border:0;background:none;overflow:visible}
+  table.lok{min-width:0}
+  .lok thead{display:none}
+  .lok tbody tr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:8px;align-items:center}
+  .lok td{border:0;padding:0}
+  .lok td.c-h{grid-row:1/3} .lok td.nm{grid-column:2} .lok td.c-i{grid-row:1/3;grid-column:3;text-align:right}
+  .lok td.c-x{grid-column:1/-1;display:flex;justify-content:space-between;font-size:13.5px;border-top:1px solid var(--soft);padding-top:4px;margin-top:4px;text-align:left}
+  .lok td.c-x::before{content:attr(data-l);color:var(--mute)}
+  .lok td.c-w,.lok td.c-d{display:none}
+  .comp{grid-template-columns:1fr auto}
+  .comp > span:nth-child(3n+1){grid-column:1/-1;margin-bottom:-6px;font-weight:600}
+  .heat th{max-width:118px}
 }
-.wrap{max-width:1500px;margin:0 auto;padding:16px}
-
-/* ---------- header ---------- */
-header{
-  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
-  background:rgba(13,15,17,.93); backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .mk .pulse,.scene .haze{animation:none}
+  .drawer,.scrim{transition:none}
 }
-.hd{max-width:1500px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.brand{display:flex;align-items:baseline;gap:10px;flex:1;min-width:230px}
-.brand h1{font-size:19px;font-weight:700;letter-spacing:-.2px}
-.brand .sub{font-size:12px;color:var(--dim)}
-.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
-  font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
-.dot.on{background:var(--baik);box-shadow:0 0 0 4px rgba(0,166,81,.18)}
-.dot.off{background:var(--tidak);box-shadow:0 0 0 4px rgba(255,212,0,.15)}
-.dot.busy{background:var(--oren);animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-button{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);
-  border-radius:9px;padding:8px 14px;cursor:pointer;transition:.15s}
-button:hover{background:var(--panel2);border-color:#3b434a}
-button.primary{background:var(--oren);border-color:var(--oren);color:#fff;font-weight:600}
-button.primary:hover{filter:brightness(1.1)}
-
-/* ---------- summary strip ---------- */
-.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden}
-.stat .n{font-size:30px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
-.stat .l{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.3}
-.stat .edge{position:absolute;left:0;top:0;bottom:0;width:4px}
-
-/* ---------- controls ---------- */
-.controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-input[type=search],select{font:inherit;color:inherit;background:var(--panel);
-  border:1px solid var(--line);border-radius:9px;padding:8px 12px}
-input[type=search]{flex:1;min-width:170px}
-.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-.seg button{border:0;border-radius:0;padding:8px 13px;font-size:13.5px}
-.seg button.sel{background:var(--oren);color:#fff;font-weight:600}
-
-/* ---------- cards ---------- */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
-  overflow:hidden;position:relative;transition:.18s;animation:rise .35s backwards}
-.card:hover{transform:translateY(-2px);border-color:#3b434a}
-@keyframes rise{from{opacity:0;transform:translateY(10px)}}
-.card .bar{height:5px}
-.card .body{padding:13px 15px 15px}
-.row1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.nm{font-size:15.5px;font-weight:700;line-height:1.2}
-.ty{font-size:11px;color:var(--dim);margin-top:2px}
-.lvl{font-size:12px;font-weight:800;padding:3px 9px;border-radius:7px;white-space:nowrap}
-.big{display:flex;align-items:baseline;gap:9px;margin:11px 0 3px}
-.big .v{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.big .u{font-size:11.5px;color:var(--dim)}
-.cat{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;letter-spacing:.3px}
-.sub2{font-size:11.5px;color:var(--dim);margin-top:9px;line-height:1.5}
-.sub2 b{color:var(--ink);font-weight:600}
-.spark{display:block;width:100%;height:34px;margin-top:10px}
-.src{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.tag{font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}
-.tag.t1{border-color:var(--baik);color:#6fe0a4}
-.tag.t3{border-color:#5a6168}
-.manual{margin-top:10px;display:flex;gap:6px;align-items:center}
-.manual input{width:92px;font:inherit;background:var(--panel2);border:1px solid var(--line);
-  color:var(--ink);border-radius:7px;padding:5px 9px;font-size:13px}
-.manual label{font-size:10.5px;color:var(--dim);flex:1;line-height:1.3}
-
-/* ---------- notes ---------- */
-.note{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--oren);
-  border-radius:10px;padding:13px 16px;margin:18px 0;font-size:13px;color:var(--dim);line-height:1.6}
-.note b{color:var(--ink)}
-.note.warn{border-left-color:var(--sangat)}
-.legend{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-.legend span{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px}
-footer{margin:26px 0 10px;font-size:11.5px;color:var(--dim);line-height:1.7;
-  border-top:1px solid var(--line);padding-top:14px}
-.skel{height:168px;border-radius:14px;background:linear-gradient(100deg,var(--panel) 30%,var(--panel2) 50%,var(--panel) 70%);
-  background-size:220% 100%;animation:sh 1.3s infinite}
-@keyframes sh{to{background-position:-220% 0}}
-@media(max-width:560px){.grid{grid-template-columns:1fr}.brand h1{font-size:17px}}
+body.still .mk .pulse, body.still .scene .haze{animation-play-state:paused}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="hd">
-    <div class="brand">
-      <h1>Pantau Udara</h1>
-      <span class="sub">Jaringan Hexindo · Sumatera &amp; Kalimantan</span>
-    </div>
-    <span class="pill"><span class="dot" id="netDot"></span><span id="netTxt">memeriksa…</span></span>
-    <span class="pill" id="stamp">—</span>
-    <button id="refresh" class="primary">Perbarui</button>
-    <button id="csv">Unduh CSV</button>
+<header class="bar">
+  <div class="brand">
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="90" fill="#fff"/><rect x="92" y="300" width="70" height="120" fill="#0070c0"/><rect x="178" y="236" width="70" height="184" fill="#ffd400"/><rect x="264" y="164" width="70" height="256" fill="#c00000"/><rect x="350" y="92" width="70" height="328" fill="#000"/></svg>
+    <div><b>Pantau Udara</b><span data-i="tagline"></span></div>
   </div>
+  <div class="datebox">
+    <button class="step" id="dPrev" type="button">&#8249;</button>
+    <input type="date" id="dPick">
+    <button class="step" id="dNext" type="button">&#8250;</button>
+    <button id="dToday" type="button" data-i="today"></button>
+  </div>
+  <div class="lang" role="group" id="langBox">
+    <button type="button" data-lang="id" aria-pressed="true">ID</button>
+    <button type="button" data-lang="en" aria-pressed="false">EN</button>
+  </div>
+  <button class="primary" id="btnPull" type="button" data-i="pull"></button>
 </header>
+<div class="status" id="status" role="status"></div>
+<nav class="tabs" id="tabs">
+  <a href="#peta" data-i="navMap"></a><a href="#tren" data-i="navTrend"></a><a href="#lokasi" data-i="navLoc"></a><a href="#metode" data-i="navMethod"></a>
+</nav>
 
-<div class="wrap">
-  <div class="strip" id="strip"></div>
-
-  <div class="controls">
-    <input type="search" id="q" placeholder="Cari lokasi, provinsi, atau stasiun…">
-    <div class="seg" id="segPulau">
-      <button data-v="" class="sel">Semua</button>
-      <button data-v="Kalimantan">Kalimantan</button>
-      <button data-v="Sumatera">Sumatera</button>
+<main>
+  <section id="peta">
+    <div class="lead"><h1 id="h1"></h1><span class="badge" id="dayBadge"></span></div>
+    <div id="emptyBox" class="panel empty" hidden></div>
+    <div class="hero" id="heroBox">
+      <div>
+        <div class="panel mapbox">
+        <div class="maptools" id="viewBtns"></div>
+        <div class="mapwrap" id="mapwrap">
+          <svg id="mapLand" viewBox="0 0 960 380" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="land-o" d="M632.9,302.8L631.6,306.2L630.1,305.5L631.7,303.6L632.9,302.8ZM621.3,330.3L620.7,327.6L619.4,325.9L619.2,324.3L622,323.8L623,322.5L623,320.8L619.5,321.3L618.5,318.9L620.5,317.2L622.3,314.1L623.6,313L626.5,311.8L636.1,309.8L638.1,309.7L643.4,309.8L650.6,309.4L652.4,309.2L654.7,308.4L656.9,307.5L659.4,306.3L661.2,307L664.3,307.4L665.9,308.5L662.3,311.7L658.3,314.3L655.8,315.1L653.3,315.6L651.4,316.6L649.7,318.2L647.6,319.1L645.3,319.5L643.3,319.9L641.4,320.9L638.9,322.5L636.8,322.6L634.7,323.2L628.2,325.5L624.2,328.1L621.3,330.3ZM600.7,326.8L604,325.1L608.9,323.8L608.2,326.3L606.4,328.3L602.7,328.3L601,327.5ZM122.4,-40L124.4,-40L126.3,-40L128.6,-40L130.4,-40L127.9,-40L130.3,-40L132.5,-40L134.9,-40L137.1,-40L139.3,-40L143.1,-40L144.6,-40L142.1,-40L140,-40L138.1,-40L140.9,-40L143.3,-40L146,-40L148.3,-40L151.1,-40L153.8,-40L155.5,-40L157.5,-40L159,-40L160.7,-40L163,-40L164.6,-40L167,-40L169.2,-40L171,-40L173.2,-40L176.2,-40L178,-40L179.8,-40L181.8,-40L184,-40L185.6,-40L187.3,-40L189.8,-40L192.6,-40L195.8,-40L198,-40L201,-40L204,-40L206.5,-40L208.6,-40L210.8,-40L213.1,-40L214.8,-40L216.3,-40L214.9,-40L216.4,-40L219,-40L220.5,-40L223,-40L226.6,-40L228.1,-40L231.2,-40L232.8,-40L230.2,-40L228.4,-40L226.8,-40L224.9,-40L223.4,-40L221.4,-40L219.6,-40L217.6,-40L215.5,-40L211.5,-40L208.2,-40L204.5,-40L201.1,-40L199.6,-40L198,-40L196.4,-40L194.8,-40L192,-40L188.6,-40L186.2,-40L184,-40L180.6,-40L178.2,-40L176.2,-40L174.6,-40L172.4,-40L170.9,-40L168.6,-40L166.7,-40L168.5,-40L170,-40L172.6,-40L174.1,-40L178.4,-40L175.8,-40L173.1,-40L171.5,-40L168.7,-40L166.9,-40L165.2,-40L162.7,-40L160.7,-40L158.9,-40L156.7,-40L154.5,-40L148.9,-40L141.8,-40L139.1,-40L137.3,-40L138.9,-40L133.1,-40L130.7,-40L124.7,-40L122.4,-40L120.4,-40L121.8,-40L119.6,-40L116.8,-40L114.5,-40L112.5,-40L110.3,-40L105.7,-40L103.3,-40L105.7,-40L107.9,-40L114.5,-40L116.7,-40L118.1,-40L119.2,-33.4L119.8,-31.8L121.2,-30.2L122.6,-28.6L123.2,-30.2L124.6,-28.5L125.6,-25.4L129.1,-8.9L130.1,-6.7L130.9,-4.6L128.8,-5.6L128.2,-9.3L127.6,-10.8L125.7,-11L126.5,-12.9L126.3,-14.3L125.1,-15.5L123.2,-14.6L123.2,-12L124.1,-10L127.4,-5.6L128.5,-3.8L131.7,-3.5L134,-1.6L135.8,0.1L140.4,2.8L143.1,2.5L146.1,1.8L148,2L150,2.7L152.3,4.9L156,10.5L162,15.2L161.1,18.1L158.7,20.4L158.4,21.8L157.4,23.5L155.8,24.4L153.6,24.4L152,22.5L148.1,23L145.1,24.2L143.8,26.6L142.2,27.3L140.5,25.5L139.9,23.1L141.5,20.9L141.7,19.3L141.5,16.7L141.1,15.1L137.5,15.1L136.3,13.4L135.8,11.5L134.3,10.4L132.6,11L126.9,9L125.3,6.3L123.5,6.6L122.7,10.2L117.4,5L114,2.5L114.4,-2.1L112.1,-3.1L111.1,-4.4L111.9,-7.1L110.6,-6.6L108.7,-6.7L107.2,-7.4L106,-11.2L103.7,-14.4L101.6,-14.4L101,-17.7L99.5,-19.2L97.5,-20.5L95.8,-21.2L94.1,-25.1L92.7,-26.1L90,-26.4L89.5,-24.9L88.4,-23.6L86.1,-24.5L84.8,-28.5L84.5,-30.9L84.9,-35.3L86.5,-39.4L88.9,-40L91.3,-40L94.1,-40L95.5,-40L97.8,-40L100.5,-40L103.8,-40L107.2,-40L108.8,-40L110.3,-40L112.2,-40L110.4,-40L108.6,-40L106,-40L104.4,-40L102.5,-40L100.3,-40L98.7,-40L94.4,-40L91.4,-40L89.9,-40L88,-40L84.9,-40L86.6,-40L89,-40L90.8,-40L96.4,-40L93.8,-40L91.8,-40L89.5,-40L85.2,-40L83.5,-40L81.3,-40L78.6,-40L75.9,-40L74.1,-40L72.5,-40L70.5,-40L69,-40L67.6,-40L69.7,-40L71.5,-40L73.4,-40L74.9,-40L76.4,-40L78.3,-40L79.8,-40L82.2,-40L84.8,-40L87.5,-40L89.1,-40L95.2,-40L97.5,-40L99.2,-40L100.8,-40L102.6,-40L105.7,-40L108,-40L109.7,-40L112.8,-40L114.4,-40L116.5,-40L119.1,-40L122.4,-40ZM113.2,9.6L112.2,8.1L113.1,5.7L114,8.6ZM199.4,113.4L196.4,114.7L193,113.5L194.1,111.5L196.4,111.1L198.2,111.7L199.9,112.7ZM640.1,-40L641.7,-40L643.9,-40L646.1,-39L646.4,-36.9L645.2,-34.9L642.8,-32.5L643.4,-31.2L645.7,-30.8L647.3,-29.7L647.6,-26.5L649.2,-24.1L648.5,-18.5L648.7,-16.7L649.9,-15.1L651.4,-13.5L651.9,-10.9L651.8,-6.5L651.7,-5L650.9,-3.5L648.8,-0.2L645.9,2.4L644.3,2.2L644.8,5.3L644.5,10.3L643.8,13.8L642.9,12L642.2,10.2L641.6,5.3L640.9,3.1L639.7,1.1L639.2,-0.7L638,-2.3L636.5,-6.7L633.8,-5.2L633.2,-3.2L630.8,-0.3L629.3,1.8L628,4.1L627.6,6.2L628.7,7.8L631.3,10L633.4,15.5L633.4,20.4L632.1,22.6L629.1,26.7L627,28L624.8,24.9L625.3,21.5L625.4,19.3L623.8,18.7L621.6,21.9L619.5,22.7L612.7,20L607.9,17.6L604.3,15.3L601.5,11.9L601,9.3L601,6.7L599.7,2.7L599.7,0.1L600.9,-2.3L602.3,-3.5L603.8,-5.4L604.1,-7.9L601.3,-11.6L599.4,-13.3L595.3,-14.9L593.3,-16.4L591,-16.6L589.5,-15.1L589.5,-13.3L587.8,-8.2L585.6,-9.3L583.5,-10.6L582.7,-12.6L582,-14L580.9,-12.3L579.8,-10.9L578.4,-10.6L576.8,-10.6L575.8,-14.4L574.3,-15.5L572.3,-15.2L569.9,-13.4L569,-11.2L566.4,-6.8L565,-3.4L563.5,-0.1L561.9,1.7L560.6,1.4L559.3,0.6L558.1,-1.5L558.5,-4L559.9,-5.6L560.9,-7.3L562.3,-13.2L562.4,-15.3L564.9,-18.9L566.8,-20.6L571.8,-21.9L573.5,-22.7L576.1,-22.7L578.2,-23.1L579.9,-24.4L579.9,-27.1L581,-28.7L583,-30.3L585.8,-30.8L587.6,-32.3L588.7,-34.1L591.2,-33L593.6,-32.4L595.6,-30.9L597,-28.6L597.6,-23.8L595.1,-21.1L598.6,-22.6L600,-23.2L603.2,-24L604.5,-25.4L605.6,-27.7L606.5,-30.2L608.1,-32L612.4,-30.5L614.6,-31.3L615.2,-33.8L615.7,-37.5L617.4,-39.4L618.9,-39.1L620.9,-37.8L622.9,-37.4L624.2,-40L627.5,-39.8L630,-40L628.3,-40L630.4,-40L632.9,-40L637.5,-40L639.1,-40ZM543.2,18.5L544.3,19.9L545.7,19.5L547.8,20L545.9,22.6L544.4,21.1L541.6,22.1L540.3,21.6L538.6,22.1L537.5,20.9L540.8,18.1L543.2,18.5ZM525,34.9L523.9,36.6L522.3,35.7L520.3,37L519.2,38.4L517.5,38.8L516.6,37.3L519.7,35.4L521.6,34.7L523.3,33.4L524.6,34.3ZM561.9,11.4L559.9,11.7L557.6,9.6L556.2,7.7L558.3,6.5L561.1,5.2L565.8,7.2L564,10.3L561.9,11.4ZM635.7,0.8L634.2,-0.8L634.3,-3.7L635.7,-2.6L635.7,0.8ZM939.5,322.4L939.5,318L939.5,314L939.5,309.9L939.5,305.8L939.5,301.8L939.5,297.7L939.5,293.7L939.5,289.6L939.5,285.5L939.5,281.4L939.5,278.1L938.4,276.8L937.3,274.8L937.5,272.2L938.9,269L939.5,266.9L939.5,265.2L939.5,261.1L939.5,257.1L939.5,253L939.5,248.9L939.5,244.8L939.5,240.8L939.5,236.7L939.5,232.7L939.5,228.6L939.5,224.5L939.5,220.5L939.5,216.4L939.5,212.3L939.5,208.3L939.4,204.2L939.4,200.1L939.4,196.1L939.4,193.6L939.4,192.2L942.1,192.2L943.7,192.6L953.8,196.9L956.7,198.6L958.7,199.1L964.2,201.7L971,204.1L978.1,206.4L980.3,206.9L982.6,207.1L987.5,207.9L990.2,208.6L994,211.5L996,212.3L997.8,213.9L1000,215.7L1000,217.1L1000,219.9L1000,222L1000,223.8L1000,225.5L1000,227L1000,236.5L1000,243.6L1000,248L1000,249.9L1000,252.3L1000,258.4L1000,260.4L1000,263.1L1000,265.2L1000,267.4L1000,271L1000,273.2L1000,274.8L1000,276.7L1000,278.6L1000,283.3L1000,287.5L1000,289.3L1000,292.3L1000,294.2L1000,297.5L1000,299.5L1000,302.1L1000,306.8L1000,309.2L1000,311.1L1000,313.3L1000,318.8L1000,321L1000,323.6L1000,325.9L1000,328.1L1000,329.9L1000,331.4L1000,333.2L1000,334.7L1000,337.4L1000,340.3L1000,341.7L1000,343.3L1000,345.1L1000,346.7L1000,348.5L1000,350.4L1000,352.8L1000,350.4L1000,348L1000,345.8L1000,343.3L1000,341.7L1000,340.3L1000,338.2L1000,335.8L1000,333.5L1000,331.6L1000,328.5L1000,324.9L1000,323.1L1000,321.2L1000,319L1000,315L1000,312.9L1000,309.1L1000,306.9L1000,304.9L1000,303.4L1000,301.5L1000,299.8L1000,297.2L1000,295.5L1000,292.6L1000,294.3L998,293.5L996.7,292.3L995.6,291L994.4,290L993.1,289.2L994.8,291L998.8,298.9L996.8,298.8L997.8,300.4L995.6,300.6L993.3,299.9L991.1,299.7L991.6,302.3L992.3,304L989,304.8L985.7,305.3L981.9,306.2L978.1,306.3L976.2,305.7L974.1,305.4L972.3,305.7L970.5,306.4L969,306.3L968,305.1L966.9,303.3L965.5,303.5L964.1,303.9L966.5,304L967.8,306.3L969.5,307.4L971.6,306.7L975.9,306.9L980.3,308.9L982.2,309.5L984.4,311.4L986.2,313.2L987.5,315.3L987.8,318.2L984.5,320.7L981.6,321.9L977.2,324L972.9,326.6L970.7,326.1L968.7,324.7L965.9,323.7L959.6,324L954.6,324.2L952.4,324.2L950.4,323.8L948.1,323L945.8,323.4L944.3,324.3L942.7,324.4L939.5,322.4ZM122.4,11.2L123.2,7.2L124.3,6.3L126.9,9L131.3,10.7L134.3,10.4L135.8,11.5L136.3,13.4L137.5,15.1L139.8,14.9L141.5,16.7L141.7,19.3L141.5,20.9L139.9,23.1L139.7,24.6L141.6,26.5L143,27.1L144.6,25.3L148.1,23L151.1,21.8L153,24.1L154.4,24.6L157.4,23.5L158.4,21.8L158.7,20.4L161.1,18.1L161.4,16.3L165.5,15.9L166.8,16.6L170.7,22.7L175.8,27.1L178,28.7L179.6,29.5L181.9,31.8L183.9,34.8L188.3,43L189,46.6L189.4,52.1L188.4,60.5L187.2,64.6L187.5,66.6L189,69.6L188.6,72.4L188.9,74.8L188.8,81.3L189.7,83.3L190.8,84.5L196.2,88.4L196.7,89.8L199.3,94.8L204.4,105.5L205.8,110.4L205,112.2L203.5,112.7L202.3,111.8L202,110.2L200.4,108.4L199.8,110.9L198.3,111.1L196.3,110.5L193.9,111L191,113.4L188.5,111.4L188,110.1L178,104.2L174.6,102.9L171,99.2L162.9,95L157.8,91L155.6,88.5L150.4,86.3L148.2,83.7L145.9,82.3L147.1,79.8L146.6,77.1L146,74.9L142.3,70.5L140.5,67.5L137,64.5L135.6,62.7L134.3,60.7L135.9,59.5L135.2,58L133.2,55.5L132.3,52.5L132.3,47L129.5,39.1L127.1,28.3L127.5,24.4L126.8,20.3L125.3,16.3L123.2,13.5L122.4,11.2ZM471.5,56.6L469,56.1L465.5,54L462,53.3L456.9,53.2L453.9,52.9L451.8,53.2L450.3,52.6L448.3,53.8L446.4,52.9L444.7,52.7L442.7,52.9L440.4,54.2L438,53L435.7,54.9L433.6,56.1L432.6,58.4L431.9,60.5L431.2,65.3L430.9,67.3L431.4,70L430.4,72.8L429.8,75.8L429.9,77.4L429.1,79.3L427.7,79.8L426.2,80.1L424.9,79.5L423.8,80.5L422.3,82.1L421.8,84.2L421.5,86.3L422.6,87.8L423.6,89.5L421.8,91.1L419.4,93L416.7,94.6L415.3,95.8L415.8,99L416.6,100.4L416,102.1L414.1,103L413.2,106.3L412.6,107.7L411.3,109.7L410.2,111L407.7,110L405.5,110.6L402.5,111L400,110.9L398.1,111.3L396.7,112.4L395.2,113.8L393.6,114.8L390.3,113.8L387.2,113.5L382.5,111.8L380.1,111.3L379.8,109.1L369.6,108.8L366.8,109.7L365,110.4L363.7,111.2L363.4,113.3L362.6,115.1L361.6,117.1L358.5,117.7L356.2,119.8L353.9,119.7L352.1,119.5L349.7,120.1L345.7,119.1L342.1,119L339.9,119.5L332.3,122.5L330.1,122.8L328,121.2L326.3,120.1L322.3,116.2L320.8,115.3L318.9,113.3L317.6,112L316.3,111.2L314.7,109.5L313.1,107.7L312.7,104.5L311.4,103.9L310.8,102.1L312.6,99.4L313.9,102.2L317.3,104.7L319.7,105.6L322.3,106L324.9,106.1L327,105.6L333.5,109.1L335.6,109.6L337.9,109.4L342,112L344.5,112.1L342.5,111L341.2,110.3L340.6,108.8L340.9,107.3L342.2,106.3L343.4,102L344,100.3L345,98.7L345.4,97.2L344.2,96L343.9,94.1L344.1,92.4L345.9,92L348.1,92.6L349,91.5L348.8,90L348.9,87.3L350.3,85.1L352.5,83.6L354.6,82.9L362.4,81.7L374.7,78.6L378.4,77.4L379.8,76.8L382.8,73.1L386.4,68.8L388.9,65.2L394.3,60L398.5,55.1L399.7,51.6L399.7,49.1L401.1,48.2L403.4,49.5L404.5,50.4L405.2,51.7L405.8,53.9L408.4,54.9L410.2,57.7L411.5,59L413.1,59.3L414.5,58.1L415.5,56.6L416.2,54.7L416.6,52.9L416.4,51.4L415.6,49L415.2,46.7L415.7,44.9L417.3,44L418.9,42.9L420.5,42L420.6,43.6L420.5,46.2L421,48.4L422.1,52.2L424.9,53L426.4,52.7L425.6,50.9L425.4,47.3L424.6,45L423.3,42.7L427.5,41.3L430.4,39L431.6,36.1L429.3,34.9L428.5,33.4L428.4,31.7L431.1,28.7L432.5,29L434.8,29.3L437.5,27.7L438.4,25.5L441.2,22.4L442.2,19.9L442.8,17.4L449.9,9.6L450.8,8.3L455,0.4L456.7,1L457,3.5L456.2,6.2L455.7,7.9L458.3,6.8L460.3,4.1L461.6,1.7L462.6,0.6L464.6,1.2L464.9,3.3L465.9,6.5L467.6,7.7L470,8.6L472.2,9.8L473.4,11.5L473.9,13L473.9,14.5L472.3,16.1L473,18.5L472.9,20L470,22.3L476.3,21.2L477.9,20.6L480.1,18.9L481.2,20.3L482.3,22.7L478.7,24.3L479.5,25.9L482.9,24.9L485,23.6L487.1,23.9L489.1,24.7L491.2,26.3L491.9,28.2L494.3,28.8L499.2,31.4L501,31.7L503.5,31.4L505.1,32.7L505.3,35.1L504.4,36.8L502.6,38L498.2,39.5L493.5,40.7L491,40.7L487.6,39.6L485.2,40.2L483.7,43.4L486.5,46.6L491.2,50L491.7,51.8L489.9,52.7L487.3,53.3L484.5,53.7L482.4,54.3L480.1,55L477.9,54.7L474.8,53.3L473,53.9L472.1,56ZM204.5,85.4L202.9,85.4L203.4,82.9L204.5,84.5ZM125.8,34.1L123.8,34.3L124.1,31.1L126.2,31.2L125.8,34.1ZM117,10.7L118.3,12.8L117.3,14.1L115.7,14.6L114.1,13.3L112.9,11.6L115,11.8L116.4,11.1ZM347.8,91.7L346.2,91.2L346,85.2L347.6,85.8L347.5,88.5L347.6,90.8ZM477.7,56.3L474.9,56.7L472.9,56.6L473.2,55L475.3,55L477.7,56.3ZM422.8,42L424.6,45L425.4,47.3L425.6,50.9L426.5,52.4L424.9,53L423.4,52.7L421,48.4L420.5,46.2L420.6,43.6L420.5,42L422.8,42ZM420.5,42L418.9,42.9L417.3,44L415.7,44.9L415.2,46.7L415.6,49L415.8,50.7L416.8,52.1L415.6,54.4L415.5,56.6L414.5,58.1L413.1,59.3L411.5,59L410.2,57.7L408.9,55.9L406.5,54.7L405.8,52.9L404.5,50.4L403.4,49.5L401.9,48.7L403.5,48.2L406,47.8L408.5,46.8L410.9,45.5L412.9,44L414.8,42.4L416.8,41.1L419.9,39.5L421,40.8ZM983.6,379.1L983.1,381.5L982.1,383.4L982.2,386.1L983.8,387.2L985.1,388L985.8,390L988,392.8L988,394.7L989.1,397.1L990.3,401.9L990.6,406.1L991.7,408.9L991,414.8L991.8,417.3L992.9,419.3L994.2,420L996.5,420L999.2,420L996.2,420L993.7,420L990.8,420L986.7,420L984.5,420L981.6,420L976.8,420L972.3,420L969.1,420L966.9,420L963.8,420L958.5,420L954.5,420L951.9,420L949.8,420L944.3,420L940.2,420L932.5,420L927.8,420L924.2,420L917.5,420L915.7,420L917.1,420L914.6,420L911,420L909.3,420L904.9,420L900.8,420L902.2,420L904.6,420L906.5,420L903.9,420L901.9,420L900.3,420L898.3,420L895.4,420L890.4,420L887.8,420L883.7,420L886.7,420L890.2,420L888.8,420L885.3,420L883.7,420L881.8,420L880.3,420L878.4,420L873.8,420L871.3,420L869.2,420L865.4,420L862.9,420L860.6,420L857.6,420L860.3,420L862.5,420L865.1,420L867.8,420L869.9,420L873,420L875.6,420L878.7,420L877,420L878.5,420L875.6,420L873.6,420L870.8,420L868.9,420L867.1,420L864.8,420L862.6,420L860.7,420L858.7,420L855.7,420L852.7,420L850.5,420L848.6,420L842.5,420L839.6,420L837.8,420L839.9,420L838.4,420L835.8,420L834.2,420L829.6,420L828.2,420L826.5,420L824.6,420L822.4,420L824.3,420L825.8,420L827.6,420L829,420L827.3,420L825.8,420L823.7,420L820.9,420L817.8,420L815.8,420L814.4,420L812.1,420L806,420L803.5,420L802,420L804.5,420L798.6,420L795.7,420L793.3,420L791,420L788,420L784.2,420L775.1,420L773,420L766.5,420L764.3,420L754.4,420L747.8,420L745.7,420L742.9,420L740.6,420L739,420L735.7,420L722.6,420L711.3,420L703.8,420L699,420L690.9,420L681.3,420L673.5,420L666.4,420L661.7,420L655.6,420L642.7,420L638.3,420L631.3,420L629.3,420L625.3,420L615.1,420L610.5,420L607.4,420L604.9,420L602.5,420L599.3,420L597.4,420L593,420L590.2,420L587.3,420L584.1,420L581.4,420L579.1,420L575.5,420L563,420L561.2,420L558.9,420L554.6,420L548.1,420L536.3,420L530.6,420L528.4,420L524.2,420L517.1,420L514.6,420L512.7,420L509,420L505,420L501.6,420L497.9,420L490.4,420L482.7,420L480.1,420L477.3,420L473.5,420L471.7,420L462.9,420L457.3,420L450.3,420L444.4,420L439.8,420L434.5,420L431.3,420L425.6,420L423.9,420L420.2,420L422,420L423.6,420L427.2,420L430.3,420L432.1,420L433.6,420L429.1,420L425.9,420L423.6,420L421.5,420L419.9,420L417.1,420L412.5,420L410.7,420L407.1,420L403.3,420L400.6,420L394.2,420L386.7,420L384.6,420L386.5,420L388.6,420L390.9,420L394.7,420L396.7,420L394.1,420L391.8,420L390.3,420L387.9,420L390.8,420L392.5,420L394.3,420L396.3,420L398.9,420L401.8,420L403.5,420L399.9,420L395.8,420L393.4,420L391.4,420L388.3,420L389.8,420L395.1,420L393.7,420L395.9,420L399.1,420L402.5,420L404.1,420L406.1,420L407.6,420L412,420L414.2,420L417.1,420L423.3,420L429.1,420L431.9,420L435.4,420L437.9,420L440.2,420L452.1,420L454.2,420L456.7,420L459.9,420L462.8,420L465.9,420L468.1,420L473.7,420L476.6,420L481.7,420L484,420L489.1,420L495.1,420L502.1,420L507.1,420L511.7,420L515.4,420L523.9,420L528.7,420L537.6,420L540,420L543.6,420L546.7,420L549.8,420L551.8,420L554.5,420L556.7,420L560.1,420L565.3,420L566.9,420L564.7,420L562.9,420L565.3,420L568.6,420L570.4,420L571.9,420L574.4,420L577,420L579.4,420L581.5,420L585.3,420L587.6,420L589.6,420L591.2,420L593.3,420L595.1,420L596.6,420L594.9,420L592.1,420L590.4,420L592.5,420L594.6,420L597.1,420L599.2,420L600.9,420L602.6,420L606,420L609,420L610.6,420L613.9,420L615.4,420L613.3,420L611.4,420L609.1,420L611.5,420L613,420L610.1,420L607.7,420L610.1,420L612.9,420L615,420L619.5,420L621.3,420L618.2,420L620.5,420L623.8,420L626,420L627.5,420L624.9,420L626.7,420L628.7,420L631.6,420L634.1,420L636.4,420L637.8,420L640.4,420L642,420L643.7,420L645.2,420L648.1,420L649.6,420L651.4,420L653.6,420L655.6,419.1L655.3,417.5L655.5,415.8L658.1,414.9L660.1,415.5L661.9,417.3L665.8,418.7L669.1,420L670.6,420L673.5,420L675.3,420L677.7,420L683.6,420L681.6,420L683.1,420L685.1,420L683.5,420L685.7,420L687.1,420L689.5,420L691.5,420L701.2,420L703.3,420L704.8,420L707.6,420L709.2,420L711.3,420L713,420L715.3,420L717,420L715.1,420L713.3,420L709.7,420L707.6,420L709.2,420L712.4,420L714.2,419.6L715.2,416.3L715.8,414.4L715.9,413L716.7,411.5L718.8,410L721.4,409.5L722.7,409L724,407.6L725.2,406L722.7,402.9L722.9,401.2L723.4,399.1L726.4,397.6L728,393.8L731.4,393.3L732.2,389.8L733.4,388.1L735.5,389.9L737.3,391.2L737.7,389.1L737.5,387.3L739.1,387L740.6,385.4L740.9,383.8L744.4,383.5L745.3,382.4L746.8,384.2L748.8,385.5L754.5,385.6L757.8,384.6L759.2,385.2L761.3,385.6L763.6,384.6L765.1,383.7L767.4,384.8L768.8,383.5L770.2,382.7L771.7,382.2L773.6,382.6L772.6,380.7L772.7,379.1L772.6,376.7L772.9,374.6L773.5,373L769.5,369.8L765.6,369.3L762.7,370L758.9,367L756.4,366L759.2,363.6L762.1,365.6L764,366.1L764.5,364.8L766.7,364.5L771.2,367.3L773.6,370.1L774.9,369.4L777.2,367.8L779.2,368.1L780.5,369.1L782.3,372.4L783.7,374.1L787.2,374.6L788.9,375.2L790.7,376.3L793.1,376.2L798.1,376.6L802.8,378.8L804.7,380.1L807,380.5L810.8,381.2L814.6,379.7L816.3,381.1L820.6,383.9L824.4,384.4L827,382.6L831,381.2L833.7,379.1L835.8,378.1L837.7,376.4L836.8,378.1L837.9,379.4L836.1,381.1L834,383L834.9,384.8L837.1,383.6L838.8,383L840.2,383.8L840.7,386.6L841.7,388.4L843.8,388.7L846.6,386.1L845.8,383.9L848.9,379L850.8,379.1L852.2,382.7L854.4,384.5L856.7,384.4L858.9,387L850.7,395.7L851.5,398.2L851.9,400.1L849.2,404.5L847.3,403.5L845.9,402.7L844.6,403.3L838.6,406.1L838.6,412.4L839.8,416.2L839.1,418.7L837.7,420L836.1,420L830.8,420L828.1,420L830.6,420L836.6,420L839.4,420L844.1,420L845.8,420L849.2,420L851.7,420L853.5,420L855.7,420L858.4,420L860,420L861.8,420L863.4,420L866,420L870.5,420L874.1,420L878.2,420L881.4,420L884.9,420L890.1,420L892.5,420L896.4,420L900.2,420L902.2,420L905,420L908.8,420L913.8,420L917.9,420L920.7,420L924.2,420L930.2,420L933,420L936.6,420L938.3,420L944.4,420L945.8,420L948.2,420L951.6,420L949.6,418.5L949.4,415.9L950.7,411.1L951.8,408.5L952.9,405.2L952.3,398.9L954.7,396.7L955.6,395.6L957.5,395.6L957.9,393.6L957,391.6L954.9,390.6L953.6,389.8L953.8,387L956.1,381.6L957.4,379.5L959.2,381.1L959.4,379.5L959,377.9L960.8,372.6L962.8,365.5L963.3,358.9L966.5,357.7L968.2,356.1L969.1,354.1L970.9,354.1L972.1,355L971.3,356.4L974.4,360.2L975.6,362.3L976.1,364.3L976.7,366.2L977,368.7L977,372.6L977.5,376.4L978.7,377.6L981.3,378.5L983.6,379.1ZM729.2,373.6L730.9,374.1L732.1,375.5L730.1,376.7L726.3,375.4L722.6,376.5L720.8,375.7L721.4,373.6L722.8,373.9L723.7,370.8L723.1,369.6L725,367.2L726.8,366.7L727.5,368.4L727.7,370.2L728.6,371.8L729.2,373.6ZM732.4,367.5L735,367.7L738.3,366.2L739.8,366.8L742.8,365.3L744.3,364.8L745.4,363.8L746.4,364.9L748.7,366.3L749.5,367.6L750.8,368.7L749.4,370.2L749.1,371.7L747.6,371.6L745.8,374.2L739,378.5L732.9,374.8L730.2,372.4L728.5,368.9L728.1,366.1L727.4,364.3L730.4,365.6L732.4,367.5ZM852,367.6L850.5,368.8L851.2,367.2L853,364.2L854.2,363.2L854.6,360.5L854.8,363.9L852,367.6ZM846.8,372.1L843.6,373.5L845.3,371.5L849,369.7L847.6,371.7ZM771.9,366L769.9,363.3L769.7,360.7L771.6,359.4L772,362.1L772.6,363.4L771.9,366Z"/><path class="land-i" d="M69.6,110.7L74,116.3L75.7,117.1L78.1,119.6L78.7,120.5L78,122.3L77.5,127.4L76.4,128.7L73.7,128.1L73.6,127.2L72,123.3L69.2,121.2L68.1,121.1L67.4,118.9L65.9,116.2L61.6,111.5L64.9,111.5L66.5,110.4L66.9,109.4L69.6,110.7ZM103.3,175.6L101.4,175.7L97.5,173.3L96.5,172.2L96.3,170.7L92.6,165.2L92.1,163.9L93.5,159.4L97.4,158.3L98.7,159.1L99.1,161.1L101.3,164.8L102,166.8L102.6,167.7L102.6,168.8L104.2,171.2L105.3,172.6L105.5,174.8L103.3,175.6ZM452.8,312.3L450.3,316.4L451.2,317.1L451.7,317.7L447.5,318.6L445.8,318.1L444.8,318.2L440.5,317.5L437.5,316.5L437.2,315.8L437.4,314.9L438.3,315.2L440.6,315.3L441.6,314.9L441.6,312.2L441.2,308.8L444.4,305.9L446.1,304.8L448,304.1L452.9,305.7L453.7,306.1L454.4,306.7L454.7,307.8L452.8,312.3ZM429,303.1L431,304.2L433.9,307.3L434.1,308.1L433.2,309L431.2,310.3L426.7,312.3L425.9,313.3L424.9,315.2L424.7,315.9L423.9,316.7L422.9,317L421.8,316.6L422.8,315.4L422.8,313.9L422.1,312.6L421.1,311.5L419,309.9L416.9,308.6L414.6,307.9L412.3,307.6L411.4,306.9L410,305.2L409.6,304.3L409.4,303.3L409.5,302.4L412.4,302.5L416.6,303.7L418.8,303.7L420,303.5L423.1,301.3L423.8,301.4L426.8,302.3L429,303.1ZM240.9,173.4L241.6,174.8L242.5,176L243.3,177.3L244.2,183.8L247.3,189.3L256.4,191.5L254.9,192.3L254.1,193.1L253.6,194.1L252.3,197.9L252.3,198.7L253.1,200L253.3,201.4L252.2,201.4L251,201.1L249.9,200.6L249,199.9L247.9,199.3L246.9,199L245,197.9L242.5,197.1L240,196.5L238.7,194.9L238.2,192.9L238.8,189.9L238.2,189L237.2,188.3L236.1,186.2L235.7,183.6L234.1,182.7L232,182.1L231,181.6L226.8,182.5L225.8,182.3L225,181.6L222.7,180.9L222.7,179.5L223.8,178.4L226.3,177.2L227.5,176.3L227.7,175L227.3,174.1L227.5,173.1L228.3,172.2L229.2,171.5L231.7,170.5L232.8,172.2L233.3,173.6L234,174.6L235.1,173.2L234.4,170.7L236.4,170.1L238.2,170.1L239.6,170.8L240.5,171.9L240.9,173.4ZM583.6,231L584,235.3L583.9,236.4L582.8,234.8L582.1,234.8L581.1,235L580.4,236.6L580.3,238.2L579.7,239.3L579.4,242.8L579.7,243.7L580.5,243.2L583,244.5L584,245.5L583.8,246.6L582.4,247.9L580.9,248.4L579.7,247.9L578.7,248.7L578.1,249.6L578.4,250.4L577,252.8L576.3,253.4L574.7,252.7L573.7,253.3L572.9,253.3L571.7,250.9L571.7,249.8L572.8,248.5L572.9,247.6L573.4,246.6L574.6,245.2L575.3,244.2L575.9,241.1L576.1,240L576.4,238.9L577,236.6L577.1,232.4L578.9,228.9L580.7,227.9L581.5,227.7L581.4,228.7L583.6,231ZM572.9,245.4L572.4,246.7L571.3,247.8L570.4,247.8L569.5,247.6L567.8,246.7L567.4,247.7L566.1,247.6L565.7,246.4L566.5,242.8L567.9,241.4L567.8,240L566.7,236.9L567.4,235.3L570.5,234.1L573.2,232.7L574,232.4L574.8,233.5L575.2,238.7L572.3,242.8L572.9,245.4ZM286.3,66.2L283.6,66.9L282,65.9L283.7,64.6L284.7,64.3L281.8,62.9L280.9,62.2L280.1,60.3L280.1,59.2L284,56L285,55.7L285.1,57L287.8,60.3L288,62.5L287.9,63.3L286.3,66.2ZM284.2,199.9L283.8,202.1L283.4,202.9L281.6,203.9L281.1,204.5L279.6,204.4L279.3,203.3L278.8,202.6L277.2,201.7L276.5,203.2L273.2,204.1L272.3,204.2L272.7,202.5L271.9,201.2L271.8,199.5L271.7,198.8L272.1,197.3L272,196L272.9,194.6L273.4,191.3L276.7,190.6L277.5,191.2L281.5,191.9L284.3,193.9L285.8,196.6L284.2,199.9ZM827.7,153L831.9,153.8L833.5,153.8L835,154.6L836.8,154.2L837.8,154.5L841.4,157.6L843.1,159.6L845.6,161.3L847.5,161.9L846.1,163.5L843.3,164.3L842.2,164.3L840.1,163.4L838.3,163.6L836.8,162.4L836.5,160.6L835,156.4L832.9,157.6L830.5,155.8L829.6,156L828.6,155.4L827.8,154.1L827.7,153ZM829.5,171.8L837.4,172.8L839.5,172.7L844,173.1L847.8,174.4L854.3,174.7L856.4,175.1L857.9,176L854.2,176.8L852.5,177.5L849.2,177.8L846.5,177.5L844.5,177.9L843.8,177.2L841,176.5L837.3,175.1L829.8,173.4L829.4,172.3ZM736.3,140.1L739.7,140.9L740.5,140.8L745.5,143L746.3,144.1L746,144.8L746.8,145.8L745.2,147.3L744.4,147.5L743.5,146.9L741.9,146.6L740.1,147.2L738.9,146.8L737.9,145.4L736.2,144.5L733.7,141.6L732.4,141.7L732.8,142.9L733.8,143.6L735.2,145.8L736,146L736.8,146L738,146.9L737.9,148.3L735,148.9L734,147.8L733.8,145.9L732.2,146.6L731.5,147.2L729.9,145.3L726.8,145.2L724.7,144.2L725.7,143.1L725.9,142L727.3,141.4L728.6,142L730,141.2L731,141.4L731.7,140.9L734.5,140.6L736.3,140.1ZM689.1,98.9L685.9,99.3L685.2,98.4L684.3,94.1L686.6,90.6L689.5,88.6L691.4,88.1L693.8,90.5L692.5,95.5L691,98L689.1,98.9ZM683,173.2L681.8,174L678.3,173.7L674.8,173.8L671.2,174.6L669.1,173.9L667.9,172.9L667.9,171.8L669.1,169.1L671.8,167L673,166.7L674.8,167.2L678.1,168.8L680.7,170.6L683,172.1L683,173.2ZM641.1,189L639.6,188.3L638.8,185.3L638,184.4L637.3,181.5L637.5,180.7L638.5,179.5L639.3,179.5L639.8,180.2L639.5,183.4L641.3,187.3L641.1,189ZM640.5,175.8L646.6,176.4L645.7,177.2L639.1,178.3L636.7,178.1L629.5,178.8L628.7,178.8L628.5,177.7L627.7,176.9L628.9,176.2L630.4,176L634.4,176.3L640.5,175.8ZM619.4,174.1L621.3,174.8L622.6,174L623.8,174.3L623.9,175.6L625.2,175.4L626.1,175.9L626.3,177.6L622.7,177.8L620.1,178.9L616.7,177.9L612.8,179.6L610.4,180.1L608.4,180.1L606.6,177.2L607.6,173.7L608.4,173.2L609.7,172.9L613.3,172.7L619.4,174.1ZM746.5,300L743.7,299.9L742.3,299.9L742.4,298.4L741.7,297.3L742.7,295.6L742.7,293.7L743.8,293.5L744,292.3L745.2,289.4L745.9,288.8L747,288.5L748.2,286.8L748.9,286.3L749.6,285L750.7,284.4L750.6,283.3L751.2,282.7L752.9,282.3L754,282.8L754.8,283.9L752.9,285.3L753.8,288.8L752.5,292.5L751.6,293.7L749.9,294.6L749.5,295.5L747.6,297.4L747,299L746.5,300ZM656,293.3L656.3,294.3L653.9,295.1L651.6,296.2L650.4,297.4L649.4,299L646.3,298.3L643.4,298.2L642.1,297.7L640.8,297.7L639.1,298.2L636.5,299.6L636.2,297.6L636.9,296.3L639.5,293.3L641.7,293.9L644.3,294.1L647.2,293.5L649.3,292.2L652.2,291.4L654.5,293.2L656,293.3ZM611.5,302.8L612,304L613.6,303.3L615.1,303.2L618.5,303.3L621,303.6L622.5,304.1L622.6,306.5L621.9,307.1L608.9,308.9L607.6,308.3L607.1,307.7L608.5,305.9L607.9,305L608.6,303.7L610.2,302.7L611.5,302.8ZM740.1,166.3L739.4,166.9L736.9,166.3L735.7,165.1L734.8,163.5L734.2,162.1L734.1,161L733.4,159.7L737.9,157.8L738.8,158.3L740.6,158.4L741.5,159.4L740.9,163.8L740.1,166.3ZM49.9,35.4L52.3,35.6L56.9,34.5L59.4,34.6L61.7,35.4L63.8,35.9L69,35.3L70,35.4L71,35.9L71.8,36.6L74.1,39.2L78.2,42.4L79.3,44.4L80,46.8L84.9,51.7L85.4,53.6L84.8,56.1L86.2,58.2L90.6,60.1L93.1,61.5L93.7,62.3L94.1,63.3L95.6,64.8L97.4,65.8L103,68.4L110.4,73.8L114.7,76.3L118.1,80.2L119.4,82.1L120.4,84.1L122.5,87L126.1,90.7L127.1,91.8L128,93.4L129.1,94.9L130.5,96.2L132.1,97.2L133.7,97.6L136.3,100.2L137.8,101L137.6,99L136.3,97.2L136.3,96.1L136.6,95.2L137.6,94.3L138.7,94.1L141,94.9L144.5,97.9L146,99.7L147.1,102.2L148.1,104.9L149.5,106.1L151.5,106.6L153.7,106.8L155.7,107.6L160.4,111.2L162,112.8L163.1,114.8L164,117.2L164.5,119.6L167.8,123.1L169.4,124.4L171.3,125L177,125.7L179,126.7L180.6,128.4L181.3,130.2L180.1,131.7L175.7,134.1L171,135.7L175.6,135.1L177.9,134.4L180,133.4L182.2,132L185.5,130.1L186.7,129.7L188.3,129.8L189.6,130.4L191.6,132.2L193.4,134.2L194.9,136.5L195.7,139.1L194.2,140.4L191.8,141.4L188.5,143.8L188.3,144.8L188.9,145.4L188.1,147.2L189.9,148.4L190.2,149.3L188.6,150.7L188.8,151.5L190.6,155.1L191.6,155.9L194.4,157.7L198.8,159.6L201.2,160.4L204,161.1L205.2,161.1L207.2,160.8L207.6,161.5L208.5,165L208.9,167.2L209.6,172L210.4,174L210.3,176.4L211.4,178.4L213.5,179.7L215.8,180.8L216.9,181.9L216.9,183.4L216.6,184.7L215.8,185.6L213.4,187.7L213,188.6L212.6,190.9L213,191.9L214,192L214.7,191.4L217.6,188.4L218.4,187.8L219.4,187.4L220.5,187.1L225.7,187.1L227.9,187.6L229.9,188.6L231.7,189.8L238,197.8L240.9,202.1L241.1,203.2L241.2,204.4L240.7,205.2L238,208.2L237.7,209L236.9,212.3L237,214.6L237.9,215.6L238.6,216.6L238.6,217.6L236.8,222.4L236.6,223.2L237.7,231.1L237.8,233.2L237.6,235.9L237.7,240.2L236.4,253.5L236.1,254.3L235,256.4L233.5,256.3L232.4,256L231.5,255.2L231.1,254.3L230.4,253.5L227,251L226.1,251.4L222.5,254.5L221.6,254.9L220.4,254.5L218.6,253.6L212.8,250.4L212.4,251.4L212.4,252.8L213.5,256.3L213.7,257.9L212.6,258.2L209.6,256.1L207.4,253.8L204.9,250.8L203,249.3L201.4,247.7L196.6,241.6L195.4,240.6L188.1,236.3L186.7,235.3L184.8,233.5L182.8,231.9L178.4,229.4L170.8,223L167.4,219.4L163.8,213.5L162.6,212L156.4,207.6L153,204.9L151.5,203.4L148.3,198L147.3,196.2L146.1,194.6L144.1,193.3L142.4,191.8L138.9,186.9L137.8,185L137,182.9L137.1,178.7L129.7,166L127.8,162L126.2,156.5L125.8,156L121.7,151.1L120.4,149.5L118.6,148L117.2,146.3L114.5,140.6L113.4,139.1L111.9,137.9L106.7,135.8L104.7,134.6L103.2,133L102.2,130.8L101.2,126.3L98.7,119.4L96,110.1L94.1,106L91.9,102.7L91.3,102L81.7,96.1L80.1,95.2L78.4,94.7L75.9,94.3L74,92.8L73.3,90.1L72.8,86.5L72.3,84.3L71.8,83.1L67.8,80.5L66.3,78.5L65,76.2L63.8,74.5L59.4,68.5L57.9,66.9L56,65.8L50.5,64.7L48.9,63.7L46.2,60.3L44.6,58.5L39.8,54.7L31.6,46.8L29.9,44.8L28.6,42.7L27.6,40.5L24.2,34.3L24.4,33.1L25,31.8L24.9,30.7L24.5,29.6L24.5,28.7L25.6,28.2L27.9,27.4L30.4,27.5L32.6,27.8L34.8,28.4L36.8,29.7L40.5,33L42.7,34.1L45,34.6L49.9,35.4ZM575.7,312.2L572.8,312.9L571.1,313.6L569.4,314.5L568.3,314.7L566.4,314.8L563.7,314.6L561.9,314.9L556.8,317.2L554.7,317.4L553,318L552.4,317.1L551.7,316.4L550,316.3L548.3,316.3L546.5,318.3L543.8,317.9L542.7,318.1L541.7,318.5L540.7,318.7L539.6,318.6L535.6,317L531,316.1L526.4,316.4L522.4,315.5L520.3,316.2L518.2,317.2L517.6,316.2L516.8,315.3L516.1,314L516.1,312.4L516.4,311.4L516.9,310.5L517.3,309.5L517.5,308.4L518.4,308.9L519.2,308.7L522,307.5L524.6,305.8L527.1,305.2L528.5,305L529.7,305.3L530.9,305.2L532.2,304.8L534.2,306.2L535,306.4L537.7,306.5L540.2,307.3L542.4,308.5L545.5,309.6L547.5,311L548.9,311.5L550,311.7L550.9,311.5L552.2,310.5L553.7,310.1L555,310.1L557.3,309.9L558.3,309.6L559.3,309.1L560.4,309.4L561.4,309.9L565.3,312.5L566.5,312.6L568.6,312L569.4,311.3L569.6,310.3L570.3,309.4L571.1,308.6L572.1,308L575,307.1L577,306.1L578.4,304.4L575.2,303.7L575.8,302.5L576.9,301.9L578.4,302.1L579.6,303L580.1,306.6L579.1,307.1L578.5,307.6L578.1,308.3L576.2,309.6L576.9,311.2L576.4,311.9L575.7,312.2ZM520.3,327.5L521.2,328.4L524.4,330.1L524.9,330.8L525.1,332.1L525.8,333L527.3,333.1L528.9,332.9L530,333.5L531.1,334.4L532.6,336.1L534,338.1L535.7,339.1L536.7,340.7L536.1,342.2L533.9,344.1L532.8,344.6L531.3,344.7L528.7,345.9L527.9,345.3L525.1,344.8L522.9,344L521,342.4L520,340.8L518.6,339.3L516.2,338.3L512,335.5L509.4,335.2L508.3,335.4L507.2,335.4L501.7,334.1L500.8,333.4L500.2,332.4L499.5,331.5L499.2,330.4L499.9,329.5L500.6,328.8L503.7,327.7L505.9,327.3L508.4,327.4L512.3,327.1L515.9,327.6L517,327.2L518.8,326L519.5,326.4L520.3,327.5ZM484.8,306.4L485.8,307.1L486.8,307.1L488.6,305.9L489.8,305.4L491,305.4L492.2,305.6L493.4,306.5L493.8,307.9L495,306.6L495.9,306.1L496.9,305.8L498.5,305.9L499.7,306.7L500.9,309.1L500.8,311.2L501.2,312L502,312.6L502.6,313.4L502.1,314.2L500.1,315L498.8,314.2L498.1,314L496.4,314.2L494.9,314.7L495.1,315.5L496.3,315.8L496.6,316.7L494.5,316.1L493.5,316.2L489.6,317.1L488.6,317.1L487.9,316.3L488,314.1L487.6,313.5L484.7,316.2L483.8,316.8L482.6,317.1L481.4,317L477.2,318.6L475.9,318.4L474.6,318.4L470.1,320.1L467.8,320.6L466.5,320.7L465.3,320.5L464.2,320.7L463.2,321.4L461.2,322L459.2,321.5L457.4,320.9L455.7,320.1L455.4,319.1L455.5,317.9L456.2,316.2L455.7,313.3L456,312L456.7,310.6L457.8,310.2L459.1,310.1L461.3,308.9L463.3,307.3L464.5,307.5L467.1,308.6L468.7,308.7L471.4,308.5L472.4,309.2L472.9,310.7L473.5,311.3L474.2,311.6L476.1,314.2L477.8,314.1L479.4,314.6L482.1,313L484.1,313L484.7,311.9L483.5,310.6L482,309.5L481.2,309.3L480.4,309.4L479.6,309.2L476.3,306.9L475.3,305.6L474.7,304.1L475.1,303L477.3,302L478.4,301.8L482.4,302.4L483,303L484,305.4L484.8,306.4ZM617.8,120.1L614,123.5L612.8,125.1L611.8,126.9L610.3,128.8L608.5,130.6L607.7,131.1L605.6,132L604.3,132.4L602,132.5L595.1,133.9L592.8,134.1L590.5,134L586.2,133.6L585.3,133.5L583.6,131.7L581.7,130.3L579.9,130.1L578.2,130.3L565.6,130.4L561.2,130.6L556.8,131.3L554.5,131L552.1,130.3L550.3,130L548.5,130.1L540.3,131.2L538.2,131.1L534,129.7L531.6,129.4L529.2,129.8L526.9,131L526.2,131.8L523.9,134.6L522.6,136.7L521.5,139.2L520.8,141.8L520.3,143.9L520.3,146.1L520.6,148.6L521.3,151.1L522,153L524.8,157.4L525.4,158L528.5,159.2L530.3,160.8L532.1,165.2L533.4,167.4L534.6,167.4L535.9,167.3L538.3,167.6L540.7,168.1L543,166.8L544.2,164.3L545.5,162.3L548.6,158.8L550.4,157.1L551.5,156.6L552.7,156.8L553.6,157.8L554.7,158.5L557,158.9L559.4,158.7L561.9,157.5L562.7,156.8L563.5,155.9L565.6,155.1L570.6,155.1L573.2,155.4L577.8,155.1L576.8,153.7L577.4,152.8L580.4,152L583.4,151.4L585.6,151.8L587.6,153L588.4,154.2L588.7,155.6L587.9,159.2L587.6,160.1L586,160.5L584.5,160L583,158.1L581,157.5L578.1,158L577.1,158.6L576.1,159.3L574.5,161.3L573.1,163.5L570.1,167L566.7,170L565,171.1L563.2,171.9L557.2,173.9L555.6,175.3L554.4,177.2L553,177.9L551.4,178.1L550.3,177.8L547.9,176.7L547.1,177.6L547,178.9L548.1,179.4L550.1,180.9L551.5,183L552.4,183.5L554.5,184.2L555.4,184.8L557,186.6L559.4,190.9L560.3,193.1L561.7,195L565.8,198.1L566,199L565.8,200.1L566.1,201L567.6,202.8L568,204L566.3,205.5L566.3,207.7L565.3,210.5L565,211.5L565,212.4L565.8,213.2L566.5,213.9L567.7,214.2L568.7,214.8L570.6,217.1L571.6,217.7L572.2,218.5L572.2,219.7L573,220.4L573.8,221.7L575,222L576,221.1L577,221.3L577.6,222.2L577.9,223.3L578,224.6L577.9,227L577.4,227.8L576.3,227.8L574.4,226.8L574.5,228.2L573.5,228.5L572.3,228.4L569.4,228.5L564.2,229.9L562.3,230.8L561.1,232.4L561,233.5L561.4,235.8L560.8,236.6L558.3,237L555,236.3L552.9,235.7L551.8,235.2L550.3,233.6L549.7,231.6L550.9,225.6L551.1,224.9L551.6,224.2L552.2,223.1L552.4,221.9L550.8,220.3L548.3,219.7L546.2,218.4L538.3,211.1L537.8,210.4L537.8,209.2L538.1,208.1L540.8,204.1L541.1,203.4L541.4,200.2L541.3,197.6L541.1,195L539.8,193.4L537.6,192.9L535.3,192.8L533.1,193.4L530.9,194.6L526.8,197.4L525.2,199L525.1,201.1L526,203.1L527.2,204.9L527.8,207L528.7,214.1L528.7,214.9L527.7,217L527.2,221.7L527.7,228.3L528.4,232.3L528.1,234.5L526.2,239.3L525.7,241.9L525.6,242.9L527.8,247.9L528.3,249.8L528.6,251.8L526.2,250.8L525.1,250.9L524,251.2L521.5,251.5L519,251.5L518.2,251.9L516.4,253.2L515.3,253.8L514.3,253.9L511.2,252.2L509.2,250.4L507.5,248.5L507.2,246.3L507.8,244L508.7,241.6L510.4,237.6L510.3,234.8L510.9,232.6L511.9,230.5L512.3,228.5L512.5,220.7L512.3,220L509.9,215.4L509.6,214.6L509.6,213.4L509.8,212.2L509.9,211.1L509.4,210.3L508.4,209.5L507.2,209.2L504.8,209.5L499.9,210.7L498.4,209.7L497.4,208L496.6,205.6L496.3,203.1L496.4,200.8L497.1,198.6L496.6,197L495.7,195.3L495.7,194.4L496.2,193.6L497.1,193L498.1,192.6L499.2,192L501.8,189.7L502.7,187.7L502.8,185.2L503.5,182.8L504.8,180.6L506.4,178.6L506.9,176.5L506.1,173.2L506.5,171.7L506.2,169.9L506.2,168.2L507.1,164.9L510.2,158.1L513.1,154.6L514.2,153.6L515.7,155.3L516.9,157.2L516.9,155.5L516.6,153.7L515.4,149.7L514.4,141.8L514.7,141L515.7,141.1L516.8,140.4L517.3,139.2L516.2,136.3L516.2,135.2L518.2,131.1L520,129.6L520.7,128.7L521.1,126.1L522,125.2L523.1,124.5L524.6,122.8L525.4,120.6L526.4,120.3L527.3,122.2L528.3,123L530.3,123.6L532.1,122.9L532.6,122L533.2,121.1L534.2,120.3L535.1,119.3L536.1,117L537.4,115L538.3,114.2L539.3,113.8L540.5,113.5L541.6,113.5L544.2,114.7L545.7,115L547.1,114.9L548.1,115.1L548.8,115.7L549.5,116.9L550.3,117.9L551,118.4L551.9,118.6L557.3,118.2L562.2,119.4L568.7,119.6L571,120.3L573.2,121.2L575.8,122.7L576.8,123.1L577.9,123L579.2,121.6L580.2,121.2L581.3,121.2L585.6,121.4L596.9,123.3L598.6,123L605.5,119.5L608.2,116.3L610.7,115.4L611.5,113.9L612,112.1L612.8,111.7L614.9,111.2L615.7,110.6L617.2,108.5L619,106.6L619.8,106L622.2,106.3L623.3,107.1L624.7,110L622.9,111.8L622.3,112.4L620.5,116.4L619.3,118.4L617.8,120.1ZM267.5,260.2L269.5,262.4L271.3,263.7L273.4,264.3L275.5,264.4L277.7,264.7L280.2,265.5L282.7,265.9L283.9,265.8L285.1,265.3L285.9,265.3L286.6,265.7L288.4,267.7L290.4,269.4L290.8,270.3L292.1,274.6L293.5,275.8L295.6,276.2L298,276.2L300.4,276.3L305.9,277.3L308.1,277.2L310,276.2L311.7,276.9L316.4,278L318.7,278.3L321.3,278L324,277.9L325.2,278.2L326.4,278.8L327.4,279L328.5,278.9L330.4,277.9L331.7,276.1L332.7,273.8L333.5,271.4L334,270.4L334.7,269.5L335.7,268.9L336.7,268.5L339.5,268.7L340,269.3L343.1,273.4L346.9,274L347.7,273.9L349.7,273L350.8,273L352.9,274L353.8,274.8L354.7,275.5L359.8,276.1L361.8,277.9L362.7,278.1L366.2,277.9L368.7,278.1L370.8,278.5L371.7,281L372.5,283.6L373,284.4L375,285.3L375.9,286.1L375.7,288.6L375.9,291.1L380.3,293.1L385,294.4L389.9,294.5L395,294.1L397.5,293.6L400.7,292.7L407.6,295.4L408.2,295.8L408.9,297.9L408.9,300.1L407.7,305.3L407.6,306.7L407.7,308.1L409,311.2L409.7,312.1L411.9,313.7L412,314.6L411.7,315.4L409.2,314.8L407.6,314.1L406.8,313L405.6,312.3L403.2,312.5L398.8,311.4L393.8,309.6L385,305.7L382.7,305.8L380.4,306.3L378,307.2L375.5,307.9L373.6,308.2L371.7,308L367,307.1L362.3,306.5L350.2,306.1L346.8,305.2L341.1,304.8L336.6,304L332.1,303L320.7,297.8L317.1,296.6L305.6,294.1L303.9,293.9L299.7,294.1L297.1,293.3L294.8,293.3L291.4,294.1L290.4,294.7L289.1,296L286.7,295.9L284.4,295.6L278.3,294.5L276.1,293.8L273.9,292.7L271.9,291.3L270.9,290.8L265.7,289.4L261.4,288.9L252.6,288.3L250.7,287.9L249.1,287.4L248.2,286.2L248.3,284.8L249,283.5L249.8,282.3L250.4,281.1L244,278.6L238.9,277.2L236.7,276.9L234.5,276.9L232,277.2L229.6,277.1L228.4,276.7L227.2,276.5L226.1,276.8L225.1,276.7L224.8,275.6L225.5,274.6L226.7,273.5L227.4,273.3L227.7,275L229.2,275.7L231.6,273.4L232.2,272.3L233.1,269.4L234.1,269.9L235.1,269.6L235.7,269.1L237.4,262.3L238.7,260.3L240.6,258.7L241.5,258.3L243.3,259.3L247,259.7L249.2,260.4L251.4,260.4L253.5,260.8L256.5,262L257.6,261.9L258.6,261.5L260.3,260.2L260.9,258.1L263.2,259.1L266.7,259.6L267.5,260.2ZM312.6,99.4L310.8,102.1L310.9,103L311.4,103.9L312.7,104.5L313.1,107.7L314.7,109.5L316.3,111.2L317.6,112L318.9,113.3L319.8,114.4L320.8,115.3L322.3,116.2L326.3,120.1L328,121.2L329.2,122.3L330.1,122.8L332.3,122.5L338.7,119.6L339.9,119.5L342.1,119L345.7,119.1L349.7,120.1L350.9,120.1L352.1,119.5L353.9,119.7L355.4,120L356.2,119.8L358.5,117.7L361.6,117.1L362.6,115.1L363.4,113.3L363.7,111.2L365,110.4L366.8,109.7L369.6,108.8L378.8,108.7L379.8,109.1L380,110.1L379.8,110.9L381.4,111.4L382.5,111.8L387.2,113.5L389.1,113.9L390.3,113.8L392.5,115.3L393.6,114.8L395.2,113.8L396.7,112.4L398.1,111.3L400,110.9L402.5,111L405.5,110.6L407.7,110L410.2,111L410.9,110.6L411.3,109.7L412.6,107.7L413.2,106.3L413.7,103.6L414.1,103L415,102.6L416,102.1L416.3,101.3L416.6,100.4L416.3,99.6L415.8,99L415.2,96.8L415.3,95.8L415.7,95L416.7,94.6L419.4,93L421.8,91.1L423.1,90.1L423.6,89.5L423.6,88.7L422.6,87.8L421.6,87.3L421.5,86.3L421.6,85.5L421.9,84.9L421.8,83.2L422.3,82.1L423.8,80.5L424.9,79.5L426.2,80.1L427.7,79.8L429.1,79.3L429.9,77.4L430,76.6L429.8,75.8L430.3,73.2L431.3,71.1L431.4,70L430.9,67.3L431.2,65.3L431.4,61.2L431.9,60.5L432.6,58.4L433.6,56.1L435.7,54.9L436.7,53.3L438,53L440.4,54.2L442.7,52.9L444.7,52.7L446.4,52.9L447.4,53.5L448.3,53.8L450.3,52.6L451.1,52.8L451.8,53.2L452.8,53.2L453.9,52.9L456.9,53.2L462,53.3L465.5,54L469,56.1L470.7,56.6L471.5,56.6L469.9,57.3L469.3,58.5L471.2,60.2L471.3,61.4L472.8,62.5L474.5,64.1L475.3,65.3L475.5,66.2L474.3,67.1L472.6,67.3L471.4,66.5L470.2,65.4L469.9,66.7L469,67.4L465.7,67.2L463.4,67.2L461.1,67.6L462.3,67.7L463.3,68.2L466.9,71.5L467.7,72.7L466.5,75.1L467,76.1L468.4,76.7L470.1,77.9L471.4,78L472.2,78.7L472.2,79.9L472.7,81L471.4,81.4L472.7,81.7L474,82.2L473.3,82.8L472.8,83.5L475,84.5L475.7,85.1L476.1,86.6L477.7,89.2L480.7,92.5L481.3,93.6L481.3,94.7L480.9,95.7L479.1,96.8L477.8,98.3L475.8,99.5L476.6,100L477.3,100.6L478.6,102.7L481.6,106L483.2,107.2L489.4,111.7L492.7,113.6L497.1,118.1L499.3,119.1L499.7,120.4L497.9,122.2L495.1,123.2L490.7,123.7L486.2,123L483.9,122.5L481.9,121.4L480.3,119.2L478.2,118L479.1,119.4L479.6,120.7L479.3,122.2L478.5,123.4L477.1,124.2L475.5,124.9L474.9,125.4L471.1,133.2L470.4,135.3L469.3,144L469.3,146.5L471,151.1L471.1,153.5L471.5,154.5L471.2,155.4L470.4,155.9L467.1,157.3L464.8,158.5L462.9,160.2L461.4,162.2L460.1,163.8L458.3,164.5L457,164.4L456,163.7L455.2,162.3L454.8,160.9L454.5,162L454.6,163L455.2,164.2L455.5,165.3L455.1,166.5L454.3,167.5L452.2,168.6L451.1,169.5L450.9,171.1L450.3,172L449.5,172.7L446.7,174.3L446,174.9L445.5,175.7L447.1,175.6L448.5,175.7L448.6,177.3L449,178.5L448.5,181.1L446.3,182.8L447.4,183.2L448.4,183.7L450.6,184.2L451.3,186L451,188.2L450.6,190.2L449,190.8L448,190.4L447,190.4L446.3,191L446.2,192.1L447.5,191.5L447.5,194.2L447.1,196.7L446.6,198L445.8,199.2L444.5,199.5L443.4,198.7L443.1,199.7L443.4,200.5L445.2,202.5L444.1,203L443.4,203.7L443,204.7L441.1,207L440.3,208.7L440,210.5L439.1,211.9L425.1,218.1L413.9,223.4L413,223L412.5,222.2L412.1,214.1L410.7,209.9L410.5,207.5L408.9,209.6L407.9,209.4L406.9,208.9L406.1,208.2L406.1,207.3L406.9,204.7L405.8,206.1L404.7,207.2L403.5,207.1L402.5,206.5L402.2,205.7L399.1,207.9L395.9,209.1L394.1,209.1L392.7,208.4L392.7,206.6L392.6,204.9L392.2,203.9L391.3,203.6L390.5,203.7L388.2,204.6L387.3,204.5L380.7,198.7L379.4,203.7L375.2,206.4L372,208L368.9,207.4L365.7,206.4L362.5,207.6L359.1,210.6L358.2,211.1L357.2,211L356.5,210.6L356.7,208.4L356.7,206.2L356.5,201.1L356.2,200.2L355.2,198.8L353.9,197.8L353.1,198.5L352.5,199.5L349.9,199.5L347.4,198.7L345.2,199.1L340.9,201.1L338.6,201.4L337.4,201L336.6,199.9L337,198.9L338,198.2L336.2,198.8L334.7,199.8L334.1,200.4L333.3,200.1L331.5,197.8L327.6,198.7L326.1,199.7L325.1,199.3L324.6,198.5L324.5,193.8L322.5,184.7L322,180L321.5,178.9L319.2,177.2L319.3,174.8L320.5,172.9L320.7,170.5L320.4,168L319.7,165.5L318.8,163.6L317.5,162L315.8,160.2L313.6,158.9L309.1,157.4L306.7,157.5L305.8,156.9L305.2,156.1L305.4,154.6L306.3,153.6L307.3,153.4L305.1,151.5L303.2,149.9L302.6,148.9L302.4,147.8L302.4,145.3L303,143.7L303.3,142.8L303.9,140.2L305.2,139.4L304.4,138.5L303.6,137.7L303,136.7L301.5,135L298.9,132.9L298.5,129.3L298.1,124.1L298.3,121.8L299.1,117.3L300.6,115.9L301.8,115.5L302.7,114.9L301.9,114.9L300.2,115.2L301.1,111.2L301.5,110.1L303.3,107.9L305.5,105.9L306.3,103.6L307.6,101.6L312.6,99.4ZM674.6,123L676.1,123.5L677.6,123.4L678.4,122.5L678.6,121.3L679.4,119.2L681.1,117.7L682.3,117.5L683.2,116.8L683,115.2L683.1,113.7L684.4,112L688.5,109.6L690.7,108.8L693.8,108.6L694.1,109.4L693.8,110.7L694.3,112.7L694.1,117.9L693.3,118.6L690.3,120.4L686.9,121.9L686,122.5L685.1,123.9L685.2,125.3L687.9,127.2L692.2,129L693.1,129.8L693.7,131.2L693.8,132.8L694.9,133.5L696.3,133.9L697.2,134.6L698,135.7L690.8,133.3L688.9,132.2L686.6,132L684.4,131.7L682.1,130.8L679.7,130.6L678.5,131.2L678,132.6L677.7,134.1L678.3,135.9L678.2,137L677.8,139L679.6,145L681.8,149.7L685.1,154.6L686.7,156.3L688.5,157.9L685.6,157.4L684.7,155.8L681,154.1L680.2,153.1L677.8,148.5L677.1,147.6L674.8,146L673.8,144.8L673.5,143.3L673.8,141.6L673.6,139.3L673.7,137L674.2,134.2L673.4,133.3L672.3,132.3L671.1,130.2L670.7,127.8L670.8,126.4L671.3,125.2L672,124.1L672.2,123L670.4,121.5L668.6,117.2L668.4,115L670.7,110.6L670.7,108.6L671.2,107.3L671.4,106L672.6,103.1L674.6,100.7L678,97.2L679.3,96.5L680.7,96L680.9,96.9L680.6,97.6L678.1,101.1L677.8,101.9L677.7,103.4L678.9,104.2L680.2,106L680.5,108.3L680.5,110.8L680.2,113.4L679.7,114.2L677.7,116.8L673,119.7L672.7,120.4L672.7,121.3L673.5,122.3L674.6,123ZM715.1,197.3L719.7,199.5L722.1,199.8L726.1,199.6L727.6,199.8L731.4,202.6L732.5,204.6L732.8,206.2L733.4,207.8L734.4,208.2L735.5,208.4L736.9,210.7L737.2,211.4L736.1,217.2L731.6,215L727.3,212.5L725.4,211.6L720.4,209.5L719.6,208.8L719,207.8L716.9,206.5L712.6,206.3L710.9,206.4L710.4,207.3L710.4,208.7L709.3,209.1L706.7,208.2L704.2,207.9L702.1,207L699.3,206.5L699.2,205.4L698.5,204.6L697.2,204.7L696,205.3L695,206L693.6,207.9L692.8,208.7L690.3,209L689.3,208.8L688.4,208.3L685.6,204.8L684.6,204L683.6,203.4L682.6,203.1L681.7,203.7L681.1,204.8L680.9,206.1L680.6,206.8L679.4,208.9L678.4,210.1L678.6,207.9L678.6,206.8L677.9,205.6L677.6,204.4L682.3,198.7L684,197.3L691.4,196.9L695.8,197.1L698.2,197L699.8,196.6L701.2,196.8L701.5,197.9L702.3,198.7L703.5,198.7L705.6,197.8L707.5,196.4L708.5,195.8L709.7,195.7L710.8,195.8L712,196.1L715.1,197.3ZM657.2,201.8L660.5,203.3L661.2,204.3L661.9,205.5L662.5,206.2L663.2,206.8L664.5,207.8L664.9,209.4L664.6,212.7L663.1,212.9L661.7,213.4L658.9,215.3L657.4,215.6L655.9,215.8L654.8,216.3L653.7,216.5L650.9,215.4L648.2,214.2L644.3,212.1L643.6,211.6L642.9,210.5L641.1,208.4L640.7,207.1L640.6,203.4L641,202.6L641.8,202.1L644.4,203L646.1,202.1L651.1,201.3L656.2,201.4L657.2,201.8ZM618.5,318.9L618.3,320.6L619.5,321.3L622,320.1L623,320.8L623,322.5L622,323.8L619.5,323.9L619.2,325.1L619.4,325.9L620,326.5L620.7,327.6L621.3,330.3L620,331.3L619.3,333.3L616.8,335.2L614.1,338.3L612.1,339.9L610.2,341.7L608.5,343L606.5,343.4L603.5,343.7L599.5,345.9L597.1,346.9L594.9,347L592.9,346.2L592.1,345.4L592.3,344.3L593,343.3L593.8,342.6L594.3,341.6L592,340.3L591.8,339.4L592.7,336.7L593.3,334.1L594.2,332.3L597.5,329.1L599.5,327.5L600.7,326.8L601,327.5L601.8,328.3L602.7,328.3L605.6,328.6L606.4,328.3L607.5,327L608.2,326.3L608.7,324.8L608.9,323.8L611.5,323.1L612.9,322.3L614.1,321.2L617.8,319.4L618.5,318.9ZM815,254.1L814.8,254.9L814.7,256.3L815.1,257.7L814.2,259L815,261L815.2,262L815.1,263.4L814.3,265.9L813.7,266.6L812.7,267.3L808.8,266.7L807.1,265.4L805.6,264L803.5,261.8L803.1,261.3L803.1,260.4L804.5,260.2L806,260.2L806,259.4L806.9,256.6L804.5,254.9L804.1,254.1L804.9,253.6L806.8,254.3L809.1,251.2L809.8,250.5L810.1,248.8L811.4,248.6L812.4,248.8L812.9,249.8L813.2,250.8L812.9,251.6L814,252.1L815,254.1ZM810.7,268.8L810.4,270.3L810.1,271.8L808.3,273.6L807.1,276.3L806.5,277L804,278.2L801.8,276.7L801.2,275.4L802.1,269.4L803.1,269.6L803.9,269.2L802.5,268.5L802.2,265.1L802.3,263.8L803.4,263.5L804.7,264.5L806.4,266.3L808.3,267.7L810.7,268.8ZM890.7,305.5L885.9,308.1L879.7,307.7L877.4,307.6L873.8,308.2L873,307.7L873.7,305.3L876.7,298.7L880.2,292.8L881.6,291.3L883.7,289.9L885.9,288.8L890.9,287.6L895.4,287.8L896,288.3L898,290.2L899.3,291.7L899.8,293.9L897.8,297.7L895.7,301.2L892.2,304L890.7,305.5ZM939.4,192.2L939.4,193.6L939.4,196.1L939.4,200.1L939.4,204.2L939.5,208.3L939.5,212.3L939.5,216.4L939.5,220.5L939.5,224.5L939.5,228.6L939.5,232.7L939.5,236.7L939.5,240.8L939.5,244.8L939.5,248.9L939.5,253L939.5,257.1L939.5,261.1L939.5,265.2L939.5,266.9L938.9,269L937.5,272.2L937.3,274.8L938.4,276.8L939.5,278.1L939.5,281.4L939.5,285.5L939.5,289.6L939.5,293.7L939.5,297.7L939.5,301.8L939.5,305.8L939.5,309.9L939.5,314L939.5,318L939.5,322.1L938.5,321.7L935.7,319.5L933.2,316.9L931.6,314.6L929.8,312.4L922,306L920.1,303.9L919.6,303.3L920.7,301.7L922.3,298.5L920.6,300.5L918.7,302L915.8,302.1L913,302.5L910.4,303.4L907.7,303.8L906.4,303.3L905.6,302.1L905.2,300.9L905,299.7L903.9,301.7L901.6,302.9L898.7,305.3L897.8,304.8L897.3,303.8L897.1,302.9L897.7,301.9L898.1,300.8L898.7,298.3L900.1,296.7L900.9,293.8L901.5,292.8L901.8,291.7L901,290.6L899.7,290.2L898.8,289.5L897.7,287.5L897,286.8L895.9,286L894.9,285L896,284.3L897.3,284L898.4,284.1L900.3,284.5L901.3,284.5L903.5,283.8L902.3,284L901,284L896.9,282.7L894.4,281.4L892,278.7L893.6,277.7L897.3,277.2L896.2,275.8L894.5,274.6L893.9,272.5L892.9,271.2L890.4,269.1L888.8,266.9L887.4,262.4L885.9,259L886.3,257.8L887.5,256.9L885.7,256.8L884,256.1L884.9,254.5L886.8,253.5L885,253.8L883.4,254.3L882.6,254.3L881.8,254.2L881.3,253.5L881.3,252.6L881.5,250.9L881.2,249.3L879.7,248.6L878.5,247.4L877.7,247L876.8,247L875.9,246.2L875.2,245.1L866.1,240.3L865.6,238.9L864.8,239.5L863.9,239.8L862.9,239L861.8,238.5L860.6,238.6L859.5,238.1L858.4,237.9L857.1,237.9L852.4,236.4L847.9,234L844.2,233L842,231.7L839.6,230.6L834.3,229.6L829,228.9L827,228.8L825.5,229.1L823.9,229L815.1,223.9L813.6,221.6L813.7,220.2L814.2,219.1L817.8,218.8L815.2,218.5L814.2,218.6L812.1,219.5L810.9,219.6L809.3,219L807.8,218.2L805.3,218.9L804.1,217.7L803.6,216.5L802.9,215.9L802,216L800.8,216.4L799.5,216.4L798.7,215.5L798.1,214.4L797.2,213.6L796.2,213L794.4,211.5L793.6,209.6L793.6,206.2L793.9,204.9L795.7,203L796.8,201.1L795.4,200.9L794,201.8L793.4,202.6L793.2,203.7L793.1,207.3L792,208.3L790.4,208.2L790.8,210.3L790.2,212.3L788.3,214.6L788.2,215.7L788.5,216.9L788,218L785,221.2L784,221.4L781.7,221.4L779.4,221.9L778.3,221.1L777.4,220.2L776.7,219L775.8,216.5L775.1,214.1L777.4,211L776.6,208.2L775.1,205.9L771.1,202.6L767,199.5L765.1,198.9L762,198.6L761.1,198.3L760.2,197.1L759.4,195.8L761.3,195.2L764.6,193.6L766.5,193.7L771.5,194.5L773,195.3L774.5,195.8L777.9,193.2L780.7,189.7L782.4,189L783.8,188.8L785.3,189.1L788.2,190.3L790.5,190.8L792.2,191L793.1,192L794,192.5L794.2,190.9L795.1,189L796.7,188.4L797.5,188.3L798.1,187.8L798,186.1L795.8,185.9L797,184.4L798,183.7L798.4,182.9L798.5,182L794.2,183.8L789.8,184.5L787.2,184.3L784.5,184.3L779.2,185.4L777.3,185.4L772.6,184.9L770,184.4L768.1,184.8L766.1,184.8L764.1,183.5L762.5,181.9L761.6,180.7L760.4,179.8L759.9,178.7L758.7,174.3L758.6,171.2L756.6,171.1L754.6,170.8L745.9,167.9L744.8,168.6L743.6,169L742.4,169.1L741.2,168.9L739.9,168.5L740,167.7L740.9,165.7L741.8,165L743,164.4L743.8,163.3L745.1,160.1L745.2,159L745,157.9L745.1,157.1L745.9,156.7L749.2,155.6L756.1,154.1L757.8,153.1L759.2,151.7L761,150.8L761.7,149.8L762.5,149.1L767.9,147.1L770.2,147L772.5,147.2L777.2,148.4L781.5,150.2L785.4,152.7L789.5,154.5L794.5,154.8L797,154.6L799.5,154.9L800.5,155.4L802.2,156.9L801.7,157.9L801.4,160L802.4,162L803.8,164L804.9,166.2L805.2,167.2L804.7,169.5L804.4,170.6L802.9,172.4L802.1,174.4L802.6,176.9L802.9,179.4L802.9,181.7L803.1,183.9L803.9,186.2L807.2,192.4L809.2,196.7L809.8,194.3L809.7,191.7L810.3,190.7L811.4,190.2L812.6,190.7L812.9,191.8L813,194.1L814,198.7L815.4,198.9L816.9,198.2L817.1,199.6L817,202.1L817.8,204.2L818.3,205L820.8,206.6L821.9,207L825,207.4L827.4,207.5L829.7,206.9L831.2,205.4L832.5,203.7L837.2,199.9L838.5,198.1L839.8,195.3L840.3,194.7L844.8,191.7L845.4,190.6L846.1,188.5L847.1,186.5L847.8,185.5L852.2,184.5L856.9,183.9L861.5,182.1L863.4,180.5L863.6,179.5L862.5,177.6L862.5,176.8L863.6,176L867.6,173.7L872.3,171.3L876.2,169.7L878.2,169.7L880.2,171.1L882.2,172.3L893,175.8L894.7,176.9L896.2,178.4L898.4,179.4L900.8,179.8L903,180.8L905,182L909.6,184.2L915.8,187L917.3,187.1L923.1,187L924.1,187.5L925,188.2L925.9,188.4L932.5,188.9L933.5,189.4L934.4,190.2L935,192.1L939.4,192.2ZM897.9,307.8L896.9,308L891.9,307.4L891.3,306.6L892.4,305.4L893.5,304L895.2,303.5L896,303.5L898,306.7L897.9,307.8ZM154.1,98.4L155.3,100.1L155.5,101.1L154.7,102.4L154.4,104.2L152,105.7L150,105.3L149.4,104.8L148.1,102L148.2,99.6L149,98.6L150.9,98.8L152.8,97.5L154.1,98.4ZM168.5,120.2L167.6,120.8L166.5,119.8L165.6,118.5L165.1,117.1L164.7,114.7L164.6,113L165.1,112.1L167.2,113.1L168.2,114.8L168.9,115.3L169,116.9L168.6,118.7L168.5,120.2ZM169.8,110.8L170,113.4L168.5,112.7L167.3,111.7L165.5,110.9L163.2,110.7L161.5,110L160.4,108.8L160.5,107.8L169.4,109.8L169.8,110.8ZM180.6,125.1L180.2,125.8L179.4,125.3L175.5,124.4L174.2,124.3L170.8,123.4L169.8,122.9L169.1,122.2L169.3,121L169.8,120.3L170.1,118.2L171,117.4L172.6,118.9L174.5,120.2L175.6,120.8L178.9,122.1L180,122.8L180.6,125.1ZM183.4,122.6L182.7,123.2L181.7,123L180.7,122.3L179.3,121.1L177.7,120.1L175.7,119.4L174.5,119.2L174.5,116.8L175.8,116.7L180,118.6L181.3,119.7L183.4,122.6ZM185.7,129.2L183.4,129.3L182.8,129L183.1,127.1L183.7,126L184.7,126L185.9,127.7L185.7,129.2ZM189,126.7L186.9,124.4L187.3,123L188.7,123.5L189.4,124.4L190,125.5L189,126.7ZM200.5,116.4L201.8,117.2L202.8,116.7L202.7,117.4L202.5,118.1L201.3,120.2L199.3,119.7L198.8,119.1L198.9,118.3L199.1,117.2L200,117.2L200.5,116.4ZM211.7,115.7L211.8,117.2L213,117.9L213.2,119L213,120.8L212,122.8L211.5,123.4L210.1,122.9L209.6,122.3L209.6,121.3L208.6,120.9L209.3,120.1L208.8,119L205.9,119.7L205,119.7L204.9,118.5L207.3,116.4L208.6,116.1L210,116.4L211.7,115.7ZM215.5,143.5L216.8,142.8L218.2,144.2L219,145L220.1,145.6L219,145.7L218.6,146.3L214,144.2L211.3,144.9L209.5,144.3L208.9,143.8L209.9,142.5L210.9,139.6L212.7,140.4L213.2,141.3L214.2,142.1L215.5,143.5ZM209.5,146.7L211.4,148.6L211.8,149.3L210.9,150.4L210.1,151.9L208.3,151.7L207.3,153.2L206.6,150.8L205.2,149.3L206,147.7L206.8,147.7L209.5,146.7ZM194.7,147L192.1,147.7L189.2,147.1L189.6,146L191,144.5L192.2,144.6L194.4,145.5L195.3,146.3L194.7,147ZM314.2,163.6L310.2,165.6L309.3,165.5L308.6,164.8L309,160.9L309.5,159.7L312.3,159.6L314,160.2L314.8,160.8L315.2,162.1L315,162.9L314.2,163.6ZM396.9,282.1L393.1,282.2L390.9,283.9L389.4,284.4L384,284.4L382.8,284.1L380.8,284.2L375.2,282.8L374.5,281.5L375.4,280L377.3,278L381.4,277.6L399.5,277.4L401.5,279.2L397.7,281L396.9,282.1ZM819.3,162.3L818.3,162.7L817.3,162.3L816.2,160.8L816.5,159.6L817.8,158.8L818.8,159.6L819.1,160.6L819.9,160.7L819.3,162.3ZM665,149.9L663.7,150.4L662.4,150.4L662.1,148.3L662.5,145.6L663.8,145.1L665.8,145.7L665,146.4L665.6,147.8L665,149.9ZM671.3,146.4L673.6,149.4L672.1,152.2L673.2,153.8L676.1,153.9L676.8,154.5L677.3,155.2L677.6,156.2L676.9,157L675.2,157.7L673.3,156.7L672.8,155.7L669.9,156.1L669.2,156.1L668.8,154.8L669.4,152.9L667.6,152L666,150L665.9,149.2L666.6,147.8L666.5,146.7L667.4,146.6L669.1,148.1L669.9,146.7L670.5,146.1L671.3,146.4ZM778.5,258L776.9,259.8L778.4,255.7L778.7,253.7L780.2,252.4L782.3,246.2L783.5,247L782.4,251.5L779.5,254.7L778.5,258ZM776.1,257L774.9,258.9L774.1,258.3L773.3,257.1L773.6,254.8L772.6,252.1L774,252.2L774.3,253L776.1,255.8L776.1,257ZM685.5,213.5L685,214.2L683.8,214.7L682.8,214.7L683.2,213.9L682.2,213.7L681,214.3L679.6,215.4L678.7,214.9L678.5,214L680.3,212L682.4,211.8L685.3,210.3L686.6,210.3L686.3,211.3L685.9,212L685.6,212.7L685.5,213.5ZM656.3,59.3L655.5,59.7L654.2,59.6L654.1,58.6L655.4,56.8L656.3,54.8L655.3,54.3L654.5,53.1L654.4,51.7L655.2,49.1L656.3,49.3L657.3,50.4L657.7,52.6L658.4,54.2L657,56.4L656.3,59.3ZM633.1,71.3L632.6,71.9L630.2,70.8L630.3,69L630.1,68.2L629.4,67.2L629.1,66.3L629.4,65.3L630.8,66.6L631.7,68.6L632.9,70.5L633.1,71.3ZM737.3,306.4L735.5,307L736.7,305.4L740.4,301.8L741.7,302.5L743.5,302.6L740.9,304.2L738.1,304.9L737.3,306.4ZM716.7,299.1L715.6,300.9L714.3,300.8L711.8,298.3L712,296.6L713.1,295.9L716.2,296.4L716.9,297.8L716.7,299.1ZM676.5,302L679.9,302.8L682,302.7L682.4,303.4L680.5,305.1L676.4,303.8L675.7,302.4L676.5,302ZM727,173.8L727.3,175L728.5,176.1L728.1,177.8L727.9,178.8L728.4,179.4L727.5,179.8L726.8,179.6L725.7,180.2L725,181L722.6,181.3L721.9,180.6L717.7,179.7L715.1,177.9L719.8,175.2L722.1,174.6L724,174.6L726.4,173.8ZM167.4,249.6L165.7,249.7L162.7,247.2L162.2,246.4L163.1,245.7L164,245.8L167.4,247.3L168.1,248.1L167.4,249.6ZM128.5,203.7L129.3,206.6L126.9,204.6L127,203.2L126.6,202.3L125.2,201.1L124.1,199.7L123.6,196.4L124,195.7L124.9,195.7L129.1,200.1L129.4,200.8L129.3,202.3L128.7,202.8L128.5,203.7ZM124.1,194.8L122.7,196.4L120.3,196.4L119.9,195.4L119.9,193L119.4,192.2L119.8,190.5L124,193.6L124.1,194.8ZM116.8,186.9L113.7,185.6L112.2,185.2L110.8,183.2L111.1,182.3L111.2,181L112.4,180.3L113.7,181.3L114.7,183.6L116.3,185.7L116.8,186.9ZM89.2,150.6L88,151.5L86.2,150.6L86.8,149.4L87.1,147.6L88.2,146.2L88.5,144.5L86.4,140L87.5,139.8L88.3,140.3L89.7,143.4L90.9,145.2L90.4,147.6L89.2,150.6ZM49.3,92.8L48,93L46.8,92.6L45.8,91.4L40.4,88.1L38.8,88L37.6,87.2L36.2,86.9L34.7,84.7L34.3,83.5L35.5,82.9L36.1,81.7L37.9,82.2L39.9,84.4L42,85.2L42.6,85.6L43.6,86.8L48.4,89.7L48.9,90.7L49.2,91.7L49.3,92.8ZM560.9,248.8L559.6,249.3L557.2,247L556.2,245.1L556.4,244L557.1,243.1L557.3,241.9L558.3,241.4L559.3,241.5L560,242.8L560.8,243.2L561.2,244.4L560.9,248.8ZM584.3,163.4L584.7,164.7L584,165.7L584.8,167.8L586.8,165.1L588.7,164.7L589.8,165.2L590.5,165.7L591,166.8L590.2,168.9L588.9,170L587.4,170.2L586.6,168.9L585.5,168.7L584.8,171.5L583.5,172.3L582.6,171.5L583.7,169.8L583,166.1L582.1,166.8L579.7,170.2L577.8,171.8L577.2,171L576.2,168.6L576.6,165.6L578.1,163.6L579.4,163.8L583.2,163.1L584.3,163.4ZM557.3,148.1L558.1,149L557.6,150.1L555.1,149.8L553.6,150.5L553.4,149.6L555,148.1L556,148.4L557.3,148.1ZM530.5,266L529.8,269.3L529.3,268.1L529.2,265.1L528.7,263.6L529,261.9L529,257.5L529.5,255.5L530.7,258.1L531,259.4L530.5,266ZM427.5,279.4L425.9,279.8L424.4,279L424.4,278.1L424.8,277.2L427.1,276.8L428.3,276.8L429.6,277.4L430.5,278L430.9,278.8L428.5,278.8L427.5,279.4ZM446.1,217.4L441.8,221.1L441.2,220.1L441.6,216.3L440.3,214L440.5,212.2L441.3,209.1L442.3,206.8L444.8,205.2L445.2,207.9L445.7,209L445.9,209.9L445.7,210.7L446.1,214.4L446.4,215.3L445.8,216.4L446.1,217.4ZM579,358.2L577.1,358.2L576.3,356.2L576.9,355.3L581.2,354L582.9,352.8L585.3,350.4L586.8,349.7L587.6,351.4L588.3,352.4L586.2,354L584.3,356.1L580.1,357.5L579,358.2ZM605.7,306.6L604.5,307.8L603.7,310L602.9,310.6L601.3,311L600.3,308.9L598.6,309L599.5,307.1L600.2,306.4L601.4,306.4L601.9,307.1L604.8,304.1L605.7,304.2L605.7,306.6ZM598.5,305.5L595.7,306L594,308.5L592.6,308.4L591.8,309.6L591.7,310.5L591,311.3L589.8,310.6L588.7,311.5L586.6,310.7L585.1,310.8L586.5,308.8L589.1,307.1L589.5,306.4L588.5,306.3L587.8,305.6L589.4,305.4L590.6,305.3L591.5,305.8L595.5,303.8L596.9,304.3L597.9,304.8L598.5,305.5ZM586.3,307.1L585.9,308L580.5,307.9L580.7,306.7L582.2,305.5L584.3,304.7L586.7,305.4L586.3,307.1ZM814.3,271L813.2,271.2L812.6,269.5L813.6,269.1L814.6,270.1L814.3,271ZM188.5,119L188.6,120.1L187.2,119.8L186.3,118.6L187.1,117.7L188.1,118.6ZM196.5,124L194.9,123.4L194.8,122.6L196.1,123.1L196.5,124ZM204.8,123.3L203.5,123.9L201.9,122.1L202.2,121.3L203.4,122.1L204.5,122.4L204.8,123.3ZM213.8,138.8L213,138.7L212.1,138.1L210,135.4L210.9,135.5L213.2,137.9L213.8,138.8ZM245.7,76.9L245.6,78.2L244.3,77.4L244,75.9L244.5,75.4L245.4,75.7L245.7,76.9ZM235.2,82.7L234.3,82.8L234.2,81.2L234,80.4L233.8,78.7L234.6,79.3L235.2,79.7L235.9,80.1L236.7,80.5L236.2,81.9L235.2,82.7ZM297.8,81.9L296.8,82.9L295.8,82.3L297.3,80.2L297.8,81.9ZM299.1,172.4L296.8,173.2L296,171.3L297.6,170.8L299.1,171.3L299.1,172.4ZM269.5,198L268.7,198.5L268.2,198L268.4,196.8L269.5,196.7L269.5,198ZM257.7,200.1L256.3,200.3L255.5,199.7L255,199.2L255.9,198L258.2,198.7L257.7,200.1ZM408.2,282.7L407.9,283.5L406.9,283.3L406,282L407,281.5L408.2,282.7ZM374.4,256.2L373.9,256.9L372.1,256.9L371.7,256.1L372.9,254.6L373.8,254.5L374.5,255L374.4,256.2ZM225,272.8L223.8,273.2L222.9,272.9L222.5,272.3L223.8,270.9L224.5,270.6L225.6,271.2L225,272.8ZM66.7,98.5L64.5,96.8L62.2,95.6L63.1,95.4L65.1,95.7L65.9,96L66.6,97L66.7,98.5ZM27.3,23.7L26.8,24.3L25.7,24L24.4,22.2L25.7,22L27.2,22.5L27.3,23.2ZM592,174.1L590.6,174.2L589.7,173.6L589.7,170.7L590.6,170.1L591.2,171L591.6,171.8L592.3,172.6L592,174.1ZM584.8,222.3L582.9,224.7L581.5,224.5L579.9,223L579.4,221.2L580.5,219.6L584.3,219.9L584.9,220.8L584.8,222.3ZM596.9,179.1L597.3,179.9L596.1,179.9L595.6,178.4L595.6,177.6L596.9,179.1ZM583,176.3L581.6,178L581.5,177.1L581.7,176.3L582.7,175.4L583,176.3ZM509.3,314.8L508.5,315L507.7,314.7L508,312.9L507.6,311.7L508.4,310.8L508.6,309.1L509.4,309.1L510,309.6L511,309.7L511.2,310.4L510.7,311.8L509.7,312.6L508.9,313.4L509.3,314.8ZM501.5,304.8L500.6,304.8L500.5,304L500.7,303.2L501.6,302.8L502.5,303.6L502.1,304.5L501.5,304.8ZM432.2,315.4L431.6,316.1L430,314.9L429.6,314.3L430.8,313.5L432.3,314.2L432.2,315.4ZM472.9,56.6L474.9,56.7L477.7,56.3L478.3,58.2L478.5,58.9L474.7,59.9L472.5,57.6L472.9,56.6ZM473.2,74.4L471.2,73.4L470.7,72.3L470.9,71.3L472.7,71.3L473.6,71.9L473.2,74.4ZM601,259.5L600.8,260.4L600.1,259.3L599.5,258.8L599.5,257.6L600.5,258L601,259.5ZM592.5,245.4L592.5,247.4L591.7,247.3L591,246.6L590.8,246L591.2,245L592.5,245.4ZM535.5,282.4L533.4,282.5L532.6,280.4L534.9,281.2L535.7,281.3L535.5,282.4ZM471.1,307.3L469.8,307L470.1,306.2L469.6,304.8L469.8,303.7L470.9,303L473.3,303L473.4,303.8L471.1,307.3ZM448.5,209.3L447.7,212.7L446.5,210.8L447.9,208.5L448.5,208L448.5,209.3ZM667.4,124.2L666.8,124.8L665.7,123.8L666.4,122.8L667.1,123L667.4,124.2ZM807.5,182.5L806.7,181.9L807,180.7L807.8,180.6L808.4,181L807.5,182.5ZM791.4,224.9L792.4,226L790,225.2L786.7,223.4L786.4,222.2L789.3,224L791.4,224.9ZM738.1,155.5L737.6,156.6L736.6,157.2L728,158.5L728.8,157.8L729.1,157L730.6,156.8L731.4,156.4L732.7,156.2L734.5,156.4L736.3,156.3L736.1,155.3L738.1,155.5ZM732.5,150.6L731.4,150.6L729.3,149.7L730.5,149L731.3,148.8L731.9,148.4L733.2,148.7L733.7,149.4L732.5,150.6ZM711,143.7L710.1,143.8L709.4,142.6L707.4,141.3L706.2,139.1L710.8,142.8L711,143.7ZM669.1,140.1L668.4,139.9L668.4,137.5L669,138.6L669.1,140.1ZM668.4,127.1L667.7,127.4L667.3,126.5L667.6,125.1L668.5,125.1L668.9,126.3L668.4,127.1ZM666,155.6L663.7,155.5L664.2,152.4L665.2,152.5L666.1,155.2ZM694.4,210.9L694.4,211.8L693.2,211.8L692.4,211.8L691.7,210.3L693.3,210.3L694.4,210.9ZM691.3,211.7L687.8,212.8L688.6,210.8L690.7,210.8L691.3,211.7ZM654.4,62.5L654.5,63.4L653.2,61.4L652.7,59.2L653.7,60L654.8,61.7L654.4,62.5ZM657.1,64.6L656,64.3L655.5,63.7L656.1,62.8L657.1,63.7L657.1,64.6ZM628.2,87L627.2,85.1L627.8,83.9L628.7,84.3L628.1,85.9L628.2,87ZM759.7,284L759.4,285L758.5,284.5L757.7,283.3L756.5,283.2L755.6,282.9L755,282.3L758.4,282.1L759.7,284ZM693.4,283.7L692.5,284.2L691,283.1L691.5,281.7L692.5,281.4L693.2,281.8L693.3,282.8L693.4,283.7ZM668.4,292.5L667.1,292.9L667.5,291.4L667.4,290.3L669.5,290.6L669.5,291.6L668.4,292.5ZM588.3,346.1L586.5,346.7L586.5,345.3L587.9,343.4L589.2,342.8L589.9,343.6L588.1,344.6L588.3,346.1ZM557.7,351.8L556.7,352.1L554.5,351.5L555.9,350.1L557.3,348.8L559,348.7L560,348.9L559.6,350.6L557.7,351.8ZM816.4,268.7L815.9,267.9L816.5,267L817,266.5L816.4,268.7ZM813.5,275L812.6,274.7L813.3,273.1L813.9,272.5L814.7,272.5L814.5,273.4L813.5,275ZM679.7,198.7L678.7,200.4L677,200.3L678.8,199L679.7,198.7ZM672.1,206.3L672.6,207.2L670.6,206.6L669.7,205.7L670.6,205.2L672.1,206.3ZM579.6,310.9L578.9,312.1L577.8,311.7L578.1,310.6L578.6,309.9L580.2,309L581.8,308.8L582.7,309.1L580.6,309.9L579.6,310.9Z"/></svg>
+          <canvas id="smoke" aria-hidden="true"></canvas>
+          <svg id="mapPts" viewBox="0 0 960 380" preserveAspectRatio="xMidYMid meet" role="group"></svg>
+        </div>
+        <div class="maplegend" id="mapLegend"></div>
+        </div>
+        <div class="panel p-comp">
+          <h3 id="compTitle"></h3>
+          <p class="hint" data-i="compHint"></p>
+          <div class="comp" id="comp"></div>
+        </div>
+      </div>
+      <div>
+        <div class="panel p-tiles">
+          <h3 data-i="tilesTitle"></h3>
+          <p class="hint" data-i="tilesHint"></p>
+          <div class="tiles" id="tiles"></div>
+          <p class="nodata" id="ndLine"></p>
+        </div>
+        <div class="panel">
+          <h3 data-i="rankTitle"></h3>
+          <ol class="rank" id="rank"></ol>
+        </div>
+      </div>
     </div>
-    <select id="sort">
-      <option value="ispu">Urut: ISPU tertinggi</option>
-      <option value="nama">Urut: nama lokasi</option>
-      <option value="pulau">Urut: pulau lalu ISPU</option>
-    </select>
-  </div>
+  </section>
 
-  <div class="legend" id="legend"></div>
-  <div class="grid" id="grid"></div>
+  <section id="tren">
+    <div class="lead"><h2 data-i="trendTitle"></h2><p id="trendSub"></p></div>
+    <div class="panel">
+      <h3 data-i="scrubTitle"></h3>
+      <p class="hint" data-i="scrubHint"></p>
+      <div id="scrub"></div>
+    </div>
+    <div class="panel">
+      <h3 data-i="lineTitle"></h3>
+      <p class="hint" data-i="lineHint"></p>
+      <div class="legend" id="lineLegend"></div>
+      <div id="lines"></div>
+    </div>
+    <div class="panel">
+      <h3 data-i="heatTitle"></h3>
+      <p class="hint" data-i="heatHint"></p>
+      <div class="heatwrap"><table class="heat" id="heat"></table></div>
+    </div>
+  </section>
 
-  <div class="note" id="methodNote">
-    <b>Cara angka ini dihitung.</b> Aplikasi mengambil konsentrasi PM2,5 dan PM10 dari Open-Meteo Air Quality
-    (gratis, tanpa kunci API), lalu mengubahnya menjadi <b>ISPU-setara</b> memakai tabel batas
-    PermenLHK No. 14 Tahun 2020 — parameter kritis diambil dari nilai tertinggi antara PM2,5 dan PM10,
-    sama seperti cara KLH menghitung. Nilai US AQI ditampilkan sebagai padanan, bukan sebagai dasar keputusan.<br><br>Untuk nilai di atas batas tabel — konsentrasi di atas 500 µg/m³ — kemiringan pita terakhir dilanjutkan secara linier. Hasilnya bisa meleset beberapa persen dari angka ISPUnet, jadi untuk lokasi ekstrem gunakan angka resmi bila tersedia.
-  </div>
+  <section id="lokasi">
+    <div class="lead"><h2 data-i="locTitle"></h2><p id="locSub"></p></div>
+    <div class="filters">
+      <input type="search" id="fQ">
+      <select id="fWil"></select>
+      <select id="fTipe"></select>
+      <select id="fLvl"></select>
+      <select id="fSort"></select>
+      <span class="sp"></span>
+      <button class="btn" id="csvDay" type="button" data-i="csvDay"></button>
+      <button class="btn" id="csvAll" type="button" data-i="csvAll"></button>
+      <button class="btn" id="expJson" type="button" data-i="expJson"></button>
+    </div>
+    <div class="tblwrap"><table class="lok" id="tbl"></table></div>
+  </section>
 
-  <div class="note warn">
-    <b>Yang perlu diketahui sebelum dipakai untuk keputusan kerja.</b>
-    Angka Open-Meteo berasal dari <b>model sebaran</b>, bukan stasiun pengukur di lokasi. Ini setara sumber
-    Tier 3 — cukup untuk peringatan dini dan untuk lokasi yang tidak punya stasiun sama sekali, tetapi
-    <b>bukan pengganti ISPU resmi</b> dan tidak berkekuatan regulasi. Bila stasiun KLH atau DLH tersedia,
-    masukkan angka resminya pada kolom di tiap kartu; angka itu akan menimpa hasil model dan ditandai Tier 1.
-    ISPU resmi memakai rata-rata 24 jam, sedangkan angka di sini per jam, sehingga lebih berfluktuasi.
-  </div>
+  <section id="metode">
+    <div class="lead"><h2 data-i="methodTitle"></h2></div>
+    <div class="method" id="method"></div>
+  </section>
 
-  <footer>
-    Sumber data daring: Open-Meteo Air Quality API (CC-BY 4.0) · Konversi ISPU: Peraturan Menteri Lingkungan Hidup dan Kehutanan No. 14 Tahun 2020 ·
-    Angka ISPU resmi dimasukkan manual oleh PIC lokasi dari aplikasi ISPUnet Kementerian Lingkungan Hidup.<br>
-    Aplikasi ini bahan rekomendasi QSHE. Keputusan penerapan di tiap lokasi tetap pada manajemen.
-    Data terakhir tersimpan di perangkat ini dan tetap tampil saat luring.
-  </footer>
-</div>
+  <footer id="foot"></footer>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" tabindex="-1"></aside>
 
 <script>
-/* ══════════════════ ISPU — PermenLHK No. 14 Tahun 2020 ══════════════════ */
-const BP = {
-  pm25: [[0,15.5,0,50],[15.6,55.4,51,100],[55.5,150.4,101,200],[150.5,250.4,201,300],[250.5,500,301,500]],
-  pm10: [[0,50,0,50],[51,150,51,100],[151,350,101,200],[351,420,201,300],[421,500,301,400],[501,600,401,500]]
+"use strict";
+/* =====================================================================
+   Pantau Udara Hexindo v2
+   Bagian yang paling mungkin perlu disesuaikan ada di blok KONFIGURASI.
+   ===================================================================== */
+
+/* ---------------- KONFIGURASI ---------------- */
+const CFG = {
+  AQ: "https://air-quality-api.open-meteo.com/v1/air-quality",
+  WX: "https://api.open-meteo.com/v1/forecast",
+  FORECAST_DAYS: 4,            // hari ini + 3 hari prakiraan
+  WINDOWS: [14, 30, 60, 90],   // pilihan panjang riwayat (hari)
+  STALE_MIN: 45,               // tarik ulang otomatis bila data lebih tua dari ini
+  // Batas atas ISPU tiap level. Ubah di sini bila matriks level Hexindo berbeda.
+  LEVELS: [["H1", 100], ["H2", 200], ["H3", 300], ["H4", Infinity]],
+  TZ: { WIB: "Asia/Jakarta", WITA: "Asia/Makassar", WIT: "Asia/Jayapura" },
 };
-function toIspu(x, jenis){
-  if (x == null || isNaN(x)) return null;
-  const t = BP[jenis];
-  for (const [xb,xa,ib,ia] of t)
-    if (x >= xb && x <= xa) return Math.round((ia-ib)/(xa-xb)*(x-xb)+ib);
-  // Di atas batas tabel, kemiringan pita terakhir dilanjutkan secara linier — cara yang sama
-  // dipakai ISPUnet untuk menghasilkan angka ribuan. Hasilnya bisa berbeda beberapa persen
-  // dari angka resmi karena pembulatan dan rata-rata 24 jam yang dipakai KLH.
-  const [xb,xa,ib,ia] = t[t.length-1];
-  return Math.round((ia-ib)/(xa-xb)*(x-xb)+ib);
+const HCOL = { H1: "#0070c0", H2: "#ffd400", H3: "#c00000", H4: "#000000", ND: "#d7dde0" };
+const WILS = ["barat", "timur", "tambang", "fasilitas"];
+const TIPES = ["cabang", "perwakilan", "proyek", "fasilitas"];
+const VIEWS = { nas: [0, 0, 960, 380], sum: [0, 0, 480, 330], kal: [230, 20, 340, 215], sul: [360, 70, 430, 300], pap: [560, 70, 400, 270] };
+const SER = { nas: ["#2b3337", ""], barat: ["#0a8a80", ""], timur: ["#b5651d", "7 4"], tambang: ["#b0307e", "2 4"] };
+
+/* Tabel batas PermenLHK No. 14 Tahun 2020 (konsentrasi µg/m3 -> ISPU) */
+const BP = {
+  pm25: [[0, 0], [15.5, 50], [55.4, 100], [150.4, 200], [250.4, 300], [500, 500]],
+  pm10: [[0, 0], [50, 50], [150, 100], [350, 200], [420, 300], [500, 500]],
+};
+/* Padanan US AQI (US EPA, pembaruan 2024 untuk PM2,5) */
+const AQI = {
+  pm25: [[0, 0], [9, 50], [35.4, 100], [55.4, 150], [125.4, 200], [225.4, 300], [325.4, 500]],
+  pm10: [[0, 0], [54, 50], [154, 100], [254, 150], [354, 200], [424, 300], [604, 500]],
+};
+
+/* ---------------- TEKS DUA BAHASA ---------------- */
+const T = {
+  id: {
+    tagline: "Jaringan operasional Hexindo", today: "Hari ini", pull: "Tarik data terbaru", pulling: "Menarik data…",
+    prev: "Tanggal sebelumnya", next: "Tanggal berikutnya", pick: "Pilih tanggal",
+    navMap: "Peta", navTrend: "Tren nasional", navLoc: "Daftar lokasi", navMethod: "Metode dan batasan",
+    h1: "Kondisi udara {d}",
+    bFinal: "Rata-rata 24 jam", bPartial: "Hari berjalan, angka sementara", bForecast: "Prakiraan model",
+    online: "Tersambung", offline: "Luring, menampilkan tarikan terakhir", pulled: "Data ditarik {t}", never: "Belum pernah menarik data",
+    history: "Riwayat", days: "{n} hari", failed: "Tarikan gagal: {m}. Angka yang tampil berasal dari tarikan terakhir.",
+    emptyT: "Belum ada data di perangkat ini", emptyB: "Sambungkan perangkat ke internet, lalu pilih Tarik data terbaru. Setelah sekali berhasil, data tetap bisa dibuka tanpa sinyal.",
+    v_nas: "Nasional", v_sum: "Sumatera dan Jawa", v_kal: "Kalimantan", v_sul: "Sulawesi dan Nusa Tenggara", v_pap: "Maluku dan Papua",
+    pause: "Jeda animasi", play: "Jalankan animasi",
+    legSmoke: "Asap bergerak mengikuti arah angin dominan pada tanggal terpilih; makin pekat makin tinggi angkanya.", legNd: "Belum ada data",
+    tilesTitle: "Jumlah lokasi per level", tilesHint: "Pilih satu level untuk menyaring daftar lokasi.", locs: "lokasi",
+    dUp: "naik {n} dari hari sebelumnya", dDown: "turun {n} dari hari sebelumnya", dSame: "sama dengan hari sebelumnya",
+    ndLine: "{n} lokasi belum punya data pada tanggal ini.",
+    rankTitle: "Angka tertinggi pada tanggal ini", rankEmpty: "Belum ada angka untuk tanggal ini.",
+    trendTitle: "Tren nasional", trendSub: "{a} sampai {b}, {n} lokasi",
+    scrubTitle: "Sebaran level per hari", scrubHint: "Tinggi batang menunjukkan jumlah lokasi pada tiap level. Pilih batang untuk berpindah tanggal.",
+    lineTitle: "Rata-rata ISPU per wilayah", lineHint: "Rata-rata angka seluruh lokasi dalam wilayah. Garis putus-putus mendatar menandai batas level.",
+    s_nas: "Nasional", compTitle: "Komposisi level per wilayah, {d}", compHint: "Bagian tiap level dari seluruh lokasi di wilayah tersebut.",
+    heatTitle: "Riwayat tiap lokasi", heatHint: "Satu baris satu lokasi, satu kotak satu hari. Pilih kotak untuk membuka rincian lokasi pada tanggal itu.",
+    isToday: "hari ini", isFc: "prakiraan", location: "Lokasi",
+    locTitle: "Daftar lokasi", locSub: "{n} dari {N} lokasi ditampilkan",
+    search: "Cari nama lokasi atau provinsi", allWil: "Semua wilayah", allTipe: "Semua tipe", allLvl: "Semua level",
+    sWorst: "Urutkan dari angka tertinggi", sBase: "Urutkan menurut wilayah", sName: "Urutkan menurut nama",
+    csvDay: "Unduh CSV tanggal ini", csvAll: "Unduh CSV seluruh periode",
+    w_barat: "Wilayah Barat", w_timur: "Wilayah Timur", w_tambang: "Pertambangan dan proyek", w_fasilitas: "Fasilitas lainnya",
+    t_cabang: "Kantor cabang", t_perwakilan: "Kantor perwakilan", t_proyek: "Proyek pertambangan", t_fasilitas: "Fasilitas",
+    cLevel: "Level", cLoc: "Lokasi", cWil: "Wilayah", cIspu: "ISPU", cCat: "Kategori ISPU", cAqi: "US AQI", cBmkg: "Kategori BMKG",
+    cRain: "Hujan (mm)", cDelta: "Selisih", cMan: "ISPU resmi", manPh: "isi",
+    srcResmi: "resmi, diisi di perangkat ini", srcBerkas: "resmi, berkas bersama", expJson: "Unduh ispu-resmi.json", sharedLine: "Berkas bersama mencatat ISPU {v} untuk tanggal ini ({s}).", srcModel: "setara, model", srcFc: "setara, prakiraan",
+    k_baik: "Baik", k_sedang: "Sedang", k_tidak: "Tidak Sehat", k_sangat: "Sangat Tidak Sehat", k_bahaya: "Berbahaya",
+    close: "Tutup", crit: "Parameter kritis", mean25: "PM2,5 rata-rata", mean10: "PM10 rata-rata", aqiEq: "US AQI setara", bmkg: "Kategori BMKG (PM2,5)",
+    peak: "Jam tertinggi", rain: "Curah hujan", wind: "Angin", from: "dari", hoursUsed: "Jam terhitung", noVal: "belum ada",
+    sceneCap: "Ilustrasi kepekatan asap menurut angka dan angin pada tanggal ini. Bukan jarak pandang terukur.",
+    hourly: "Per jam pada tanggal ini", hourlyHint: "ISPU setara dari konsentrasi tiap jam, waktu setempat ({z}). Jam yang belum terjadi ditampilkan pudar.",
+    locTrend: "Riwayat lokasi ini", ctlTitle: "Pengendalian yang disarankan pada {h}", forWorker: "Pekerja lapangan", forLead: "Safety manager dan pimpinan lokasi",
+    manTitle: "Angka ISPU resmi untuk tanggal ini", manHint: "Isi dari ISPUnet KLH atau DLH setempat bila ada stasiun. Angka resmi menggantikan angka model pada tanggal ini dan tersimpan di perangkat ini sampai dibagikan lewat berkas ispu-resmi.json.",
+    station: "Stasiun rujukan: {s}", save: "Simpan", clear: "Hapus angka resmi", sameSite: "Lokasi lain pada titik pantau yang sama: {s}",
+    decision: "Angka dan saran pada aplikasi ini adalah bahan rekomendasi QSHE. Keputusan penerapan di tiap lokasi berada pada manajemen.",
+    methodTitle: "Metode dan batasan",
+    hn_H1: "Pantau", hn_H2: "Batasi", hn_H3: "Kurangi", hn_H4: "Lindungi",
+    m1t: "Sumber angka", m1: ["Lapis pertama adalah ISPU resmi dari stasiun KLH atau DLH, diisi manual per lokasi per tanggal. Angka ini berkekuatan regulasi dan selalu didahulukan.",
+      "Lapis kedua adalah model sebaran CAMS yang ditarik otomatis lewat Open-Meteo: PM2,5 dan PM10 per jam, 90 hari ke belakang sampai 3 hari ke depan.",
+      "Curah hujan dan angin harian ditarik dari model cuaca Open-Meteo. Arah angin dipakai untuk menggerakkan animasi asap pada peta."],
+    m2t: "Cara menghitung", m2: ["Konsentrasi per jam dirata-ratakan per hari menurut waktu setempat, lalu diubah menjadi ISPU setara dengan tabel batas PermenLHK No. 14 Tahun 2020. Parameter kritis adalah yang tertinggi antara PM2,5 dan PM10.",
+      "Untuk hari berjalan, rata-rata dihitung dari pukul 00.00 sampai jam terakhir dan ditandai sementara.",
+      "US AQI setara dihitung dengan tabel US EPA. Kategori BMKG memakai batas konsentrasi PM2,5 (15,5; 55,4; 150,4; 250,4 µg/m³).",
+      "Di atas batas tabel, kemiringan pita terakhir dilanjutkan secara linier."],
+    m3t: "Level tindakan", m3h: ["Level", "ISPU", "Kategori ISPU", "Arah pengendalian"],
+    m3: [["H1", "0 sampai 100", "Baik, Sedang", "Kegiatan normal, pantau harian"], ["H2", "101 sampai 200", "Tidak Sehat", "Batasi paparan pekerjaan luar ruang"], ["H3", "201 sampai 300", "Sangat Tidak Sehat", "Pertimbangkan pengurangan beban kerja luar ruang"], ["H4", "di atas 300", "Berbahaya", "Pertimbangkan pembatasan pada pekerjaan kritis"]],
+    m4t: "Batasan yang perlu disampaikan", m4: ["Angka model bukan hasil alat ukur di lokasi dan tidak berkekuatan regulasi. Resolusi model sekitar 40 km, sehingga lokasi yang berdekatan mendapat angka yang sama.",
+      "Pada kebakaran lahan di dekat lokasi, model cenderung lebih rendah daripada angka stasiun. Bila ada stasiun ISPU, isi angka resminya.",
+      "Koordinat lokasi adalah perkiraan dari alamat pada daftar induk dan dapat diperbaiki di berkas locations.json.",
+      "Angka resmi yang diisi manual tersimpan di perangkat pengisi. Agar tampil di semua perangkat, pilih Unduh ispu-resmi.json pada daftar lokasi, lalu unggah berkas itu ke repositori GitHub."],
+    foot: "Disusun QSHE Department, PT Hexindo Adiperkasa Tbk. Data model: Open-Meteo dan Copernicus Atmosphere Monitoring Service. Garis pantai: Natural Earth.",
+    compass: ["U", "TL", "T", "TG", "S", "BD", "B", "BL"],
+    ctl: {
+      H1: { w: ["Kegiatan berjalan seperti biasa.", "Pekerja dengan asma atau penyakit jantung dan paru membawa obat pelega dan melapor bila bergejala.", "Masker tersedia di pos kerja untuk pekerjaan luar ruang lebih dari 4 jam."],
+            l: ["Pantau angka harian dan arah angin.", "Pastikan stok masker N95 atau KN95 dan filter kabin cadangan tersedia."] },
+      H2: { w: ["Pakai masker N95 atau KN95 selama bekerja di luar ruang.", "Kerja fisik berat paling lama 2 jam, lalu istirahat 20 menit di ruang tertutup.", "Kabin unit dan kendaraan pada mode recirculate dengan jendela tertutup.", "Las dan gerinda di area terbuka dijadwalkan ulang bila memungkinkan."],
+            l: ["Atur rotasi kerja luar ruang dan catat pada JSEA harian.", "Alihkan pekerja kelompok rentan ke pekerjaan dalam ruang.", "Minta pembacaan alat pantau udara milik customer di site bila tersedia.", "Periksa jarak pandang sebelum memberangkatkan kendaraan."] },
+      H3: { w: ["Masker N95 atau KN95 wajib dan terpasang rapat; ganti bila lembap atau kotor.", "Kerja fisik berat paling lama 1 jam, lalu istirahat 30 menit di ruang berudara bersih.", "Laporkan segera sesak, nyeri dada, pusing, atau batuk yang menetap.", "Perjalanan darat hanya bila jarak pandang memadai, dengan lampu utama menyala."],
+            l: ["Pertimbangkan pengurangan beban kerja luar ruang dan dahulukan pekerjaan kritis.", "Jadwalkan ulang pekerjaan non-kritis ke jam dengan angka lebih rendah.", "Siapkan ruang berudara bersih: pintu tertutup, AC recirculate, pembersih udara bila ada.", "Percepat penggantian filter kabin dan periksa seal pintu unit.", "Koordinasikan dengan customer dan ikuti arahan pemerintah daerah."] },
+      H4: { w: ["Berada di luar ruang hanya untuk pekerjaan yang disetujui pimpinan lokasi.", "Masker N95 atau KN95 terpasang rapat sepanjang waktu di luar ruang; pekerjaan bergantian dalam durasi pendek.", "Pekerja kelompok rentan tidak ditugaskan di luar ruang.", "Hentikan aktivitas dan lapor bila muncul gejala; petugas P3K siaga."],
+            l: ["Pertimbangkan pembatasan pekerjaan luar ruang pada pekerjaan kritis saja, dengan persetujuan pimpinan lokasi.", "Pertimbangkan penundaan perjalanan darat non-kritis dan nilai ulang risiko perjalanan tiap keberangkatan.", "Pantau kesehatan pekerja tiap shift dan catat keluhan pernapasan.", "Tinjau kesiapan evakuasi medis dan jalur keluar bila ada titik api di sekitar lokasi.", "Laporkan kondisi kepada manajemen; keputusan operasional berada pada manajemen."] },
+    },
+  },
+  en: {
+    tagline: "Hexindo operational network", today: "Today", pull: "Pull latest data", pulling: "Pulling data…",
+    prev: "Previous date", next: "Next date", pick: "Choose a date",
+    navMap: "Map", navTrend: "National trend", navLoc: "Locations", navMethod: "Method and limits",
+    h1: "Air quality on {d}",
+    bFinal: "24-hour average", bPartial: "Day in progress, provisional", bForecast: "Model forecast",
+    online: "Connected", offline: "Offline, showing the last pull", pulled: "Data pulled {t}", never: "No data pulled yet",
+    history: "History", days: "{n} days", failed: "Pull failed: {m}. Figures shown are from the last successful pull.",
+    emptyT: "No data on this device yet", emptyB: "Connect to the internet, then choose Pull latest data. After one successful pull, the data stays available without a signal.",
+    v_nas: "National", v_sum: "Sumatra and Java", v_kal: "Kalimantan", v_sul: "Sulawesi and Nusa Tenggara", v_pap: "Maluku and Papua",
+    pause: "Pause animation", play: "Play animation",
+    legSmoke: "Smoke drifts with the dominant wind on the selected date; denser smoke means a higher figure.", legNd: "No data yet",
+    tilesTitle: "Locations per level", tilesHint: "Choose a level to filter the location list.", locs: "locations",
+    dUp: "up {n} from the previous day", dDown: "down {n} from the previous day", dSame: "same as the previous day",
+    ndLine: "{n} locations have no data on this date.",
+    rankTitle: "Highest figures on this date", rankEmpty: "No figures for this date yet.",
+    trendTitle: "National trend", trendSub: "{a} to {b}, {n} locations",
+    scrubTitle: "Level spread per day", scrubHint: "Bar height shows how many locations sit at each level. Choose a bar to move to that date.",
+    lineTitle: "Average ISPU per region", lineHint: "Mean of all locations in a region. Horizontal dashed lines mark the level boundaries.",
+    s_nas: "National", compTitle: "Level mix per region, {d}", compHint: "Share of each level among all locations in the region.",
+    heatTitle: "History per location", heatHint: "One row per location, one cell per day. Choose a cell to open that location on that date.",
+    isToday: "today", isFc: "forecast", location: "Location",
+    locTitle: "Locations", locSub: "Showing {n} of {N} locations",
+    search: "Search by location or province", allWil: "All regions", allTipe: "All types", allLvl: "All levels",
+    sWorst: "Sort by highest figure", sBase: "Sort by region", sName: "Sort by name",
+    csvDay: "Download CSV for this date", csvAll: "Download CSV for the full period",
+    w_barat: "West Region", w_timur: "East Region", w_tambang: "Mining and projects", w_fasilitas: "Other facilities",
+    t_cabang: "Branch office", t_perwakilan: "Representative office", t_proyek: "Mining project", t_fasilitas: "Facility",
+    cLevel: "Level", cLoc: "Location", cWil: "Region", cIspu: "ISPU", cCat: "ISPU category", cAqi: "US AQI", cBmkg: "BMKG category",
+    cRain: "Rain (mm)", cDelta: "Change", cMan: "Official ISPU", manPh: "enter",
+    srcResmi: "official, entered on this device", srcBerkas: "official, shared file", expJson: "Download ispu-resmi.json", sharedLine: "The shared file records ISPU {v} for this date ({s}).", srcModel: "equivalent, model", srcFc: "equivalent, forecast",
+    k_baik: "Good", k_sedang: "Moderate", k_tidak: "Unhealthy", k_sangat: "Very Unhealthy", k_bahaya: "Hazardous",
+    close: "Close", crit: "Critical parameter", mean25: "PM2.5 average", mean10: "PM10 average", aqiEq: "US AQI equivalent", bmkg: "BMKG category (PM2.5)",
+    peak: "Peak hour", rain: "Rainfall", wind: "Wind", from: "from", hoursUsed: "Hours counted", noVal: "none yet",
+    sceneCap: "Illustration of smoke density from the figure and wind on this date. Not a measured visibility.",
+    hourly: "Hour by hour on this date", hourlyHint: "ISPU equivalent from each hour's concentration, local time ({z}). Hours that have not happened yet are faded.",
+    locTrend: "History of this location", ctlTitle: "Suggested controls at {h}", forWorker: "Field workers", forLead: "Safety manager and site lead",
+    manTitle: "Official ISPU figure for this date", manHint: "Enter it from the ministry's ISPUnet or the local environment agency where a station exists. The official figure replaces the model figure for this date and stays on this device until shared through the ispu-resmi.json file.",
+    station: "Reference station: {s}", save: "Save", clear: "Remove official figure", sameSite: "Other locations at the same monitoring point: {s}",
+    decision: "Figures and suggestions in this app are QSHE recommendation material. Decisions on implementation at each location rest with management.",
+    methodTitle: "Method and limits",
+    hn_H1: "Monitor", hn_H2: "Limit", hn_H3: "Reduce", hn_H4: "Protect",
+    m1t: "Where the figures come from", m1: ["The first layer is the official ISPU from ministry or provincial stations, entered manually per location per date. It carries regulatory weight and always takes priority.",
+      "The second layer is the CAMS dispersion model pulled automatically through Open-Meteo: hourly PM2.5 and PM10, up to 90 days back and 3 days ahead.",
+      "Daily rainfall and wind come from the Open-Meteo weather model. Wind direction drives the smoke animation on the map."],
+    m2t: "How figures are calculated", m2: ["Hourly concentrations are averaged per day in local time, then converted to an ISPU equivalent with the breakpoints in Ministerial Regulation No. 14 of 2020. The critical parameter is the higher of PM2.5 and PM10.",
+      "For the day in progress, the average runs from 00:00 to the latest hour and is marked provisional.",
+      "The US AQI equivalent uses the US EPA table. The BMKG category uses PM2.5 concentration limits (15.5, 55.4, 150.4, 250.4 µg/m³).",
+      "Above the top of the table, the slope of the last band is continued linearly."],
+    m3t: "Action levels", m3h: ["Level", "ISPU", "ISPU category", "Direction of control"],
+    m3: [["H1", "0 to 100", "Good, Moderate", "Normal activity, daily monitoring"], ["H2", "101 to 200", "Unhealthy", "Limit exposure during outdoor work"], ["H3", "201 to 300", "Very Unhealthy", "Consider reducing the outdoor workload"], ["H4", "above 300", "Hazardous", "Consider limiting outdoor work to critical tasks"]],
+    m4t: "Limits to tell readers about", m4: ["Model figures are not on-site instrument readings and carry no regulatory weight. Model resolution is about 40 km, so nearby locations receive the same figure.",
+      "Close to land fires the model tends to read lower than station figures. Where an ISPU station exists, enter its official figure.",
+      "Location coordinates are estimated from the addresses in the master list and can be corrected in locations.json.",
+      "Manually entered official figures stay on the device that entered them. To show them on every device, choose Download ispu-resmi.json in the location list, then upload that file to the GitHub repository."],
+    foot: "Prepared by the QSHE Department, PT Hexindo Adiperkasa Tbk. Model data: Open-Meteo and the Copernicus Atmosphere Monitoring Service. Coastlines: Natural Earth.",
+    compass: ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
+    ctl: {
+      H1: { w: ["Work proceeds as usual.", "Workers with asthma or heart and lung conditions carry their reliever medication and report any symptoms.", "Masks are available at the work post for outdoor tasks longer than 4 hours."],
+            l: ["Track the daily figure and wind direction.", "Confirm stock of N95 or KN95 masks and spare cabin filters."] },
+      H2: { w: ["Wear an N95 or KN95 mask while working outdoors.", "Heavy physical work for at most 2 hours, then a 20-minute break indoors.", "Machine and vehicle cabins on recirculate with windows closed.", "Reschedule open-air welding and grinding where possible."],
+            l: ["Set outdoor work rotation and record it in the daily JSEA.", "Move at-risk workers to indoor tasks.", "Ask for readings from the customer's air monitor on site where one exists.", "Check visibility before dispatching vehicles."] },
+      H3: { w: ["An N95 or KN95 mask is required and fitted tightly; replace it when damp or dirty.", "Heavy physical work for at most 1 hour, then a 30-minute break in a clean-air room.", "Report shortness of breath, chest pain, dizziness or a persistent cough at once.", "Road travel only when visibility is adequate, with headlights on."],
+            l: ["Consider reducing the outdoor workload and put critical work first.", "Reschedule non-critical work to hours with lower figures.", "Prepare a clean-air room: doors closed, air conditioning on recirculate, an air purifier where available.", "Bring forward cabin filter changes and check machine door seals.", "Coordinate with the customer and follow local government direction."] },
+      H4: { w: ["Be outdoors only for work approved by the site lead.", "Keep an N95 or KN95 mask tightly fitted at all times outdoors; rotate tasks in short spells.", "At-risk workers are not assigned outdoors.", "Stop the activity and report if symptoms appear; first aiders on standby."],
+            l: ["Consider limiting outdoor work to critical tasks only, with the site lead's approval.", "Consider postponing non-critical road travel and reassess journey risk before each departure.", "Check worker health every shift and log respiratory complaints.", "Review readiness for medical evacuation and exit routes if fires are burning near the location.", "Report conditions to management; operational decisions rest with management."] },
+    },
+  },
+};
+
+/* ---------------- KEADAAN ---------------- */
+const $ = (s, r = document) => r.querySelector(s);
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+};
+let LOK = [], PTS = [], db = null, agg = {}, dates = [], today = "", sel = "";
+let lang = LS.get("pu2.lang", "id") === "en" ? "en" : "id";
+let win = CFG.WINDOWS.includes(LS.get("pu2.win", 30)) ? LS.get("pu2.win", 30) : 30;
+let manual = LS.get("pu2.manual", {});
+let shared = {};              // angka resmi dari berkas ispu-resmi.json di repositori (tampil di semua perangkat)
+let view = "nas", detailId = null, busy = false, lastErr = "";
+let playing = LS.get("pu2.play", true) && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+const filt = { q: "", wil: "all", tipe: "all", lvl: "all", sort: "worst" };
+let Ecache = {}, S = null;
+
+/* ---------------- ALAT BANTU ---------------- */
+const t = (k, v) => { let s = T[lang][k] ?? T.id[k] ?? k; if (v) for (const [a, b] of Object.entries(v)) s = s.replace("{" + a + "}", b); return s; };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const loc = () => (lang === "id" ? "id-ID" : "en-GB");
+const fmt = (n, d = 0) => (n == null || isNaN(n)) ? "–" : Number(n).toLocaleString(loc(), { minimumFractionDigits: d, maximumFractionDigits: d });
+const dObj = s => new Date(s + "T12:00:00Z");
+const addDays = (s, n) => { const d = dObj(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const diffDays = (a, b) => Math.round((dObj(b) - dObj(a)) / 864e5);
+const fLong = s => new Intl.DateTimeFormat(loc(), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(dObj(s));
+const fMid = s => new Intl.DateTimeFormat(loc(), { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(dObj(s));
+const fShort = s => new Intl.DateTimeFormat(loc(), { day: "numeric", month: "short", timeZone: "UTC" }).format(dObj(s));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const maxN = (a, b) => (a == null ? b : b == null ? a : Math.max(a, b));
+const r1 = v => (v == null || isNaN(v) ? null : Math.round(v * 10) / 10);
+function nowIn(tz) {
+  const o = {};
+  new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" })
+    .formatToParts(new Date()).forEach(p => (o[p.type] = p.value));
+  return { date: `${o.year}-${o.month}-${o.day}`, hour: +o.hour % 24 };
 }
-const BANDS = [
-  {max:50,   key:"baik",   nama:"BAIK",               warna:"#00a651", teks:"#fff"},
-  {max:100,  key:"sedang", nama:"SEDANG",             warna:"#0070c0", teks:"#fff"},
-  {max:200,  key:"tidak",  nama:"TIDAK SEHAT",        warna:"#ffd400", teks:"#141414"},
-  {max:300,  key:"sangat", nama:"SANGAT TIDAK SEHAT", warna:"#e02020", teks:"#fff"},
-  {max:1e9,  key:"bahaya", nama:"BERBAHAYA",          warna:"#111111", teks:"#fff"}
-];
-const band = v => v == null ? {key:"none",nama:"BELUM ADA DATA",warna:"#3a4147",teks:"#8b949c"} : BANDS.find(b=>v<=b.max);
-const LEVEL = v => v == null ? "—" : v<=100 ? "H1" : v<=200 ? "H2" : v<=300 ? "H3" : "H4";
-const LEVEL_TXT = {H1:"Operasi normal + pantau", H2:"Batasi kerja fisik berat", H3:"Hanya pekerjaan esensial", H4:"Kurangi beban & paparan"};
+function niceMax(v) { const steps = [100, 150, 200, 300, 400, 500, 600, 800, 1000, 1500, 2000, 3000, 4000, 5000, 8000]; return steps.find(s => s >= v) || Math.ceil(v / 1000) * 1000; }
 
-/* ══════════════════ keadaan ══════════════════ */
-const KEY_DATA = "hexindo.udara.data.v1";
-const KEY_MAN  = "hexindo.udara.manual.v1";
-let LOK = [], HASIL = [], MANUAL = {}, filterPulau = "", cari = "", urut = "ispu";
-
-const simpan = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
-const baca   = (k,d) => { try{ const r = localStorage.getItem(k); return r ? JSON.parse(r) : d; }catch(e){ return d; } };
-
-/* ══════════════════ ambil data ══════════════════ */
-const API = "https://air-quality-api.open-meteo.com/v1/air-quality";
-async function ambilSatu(l){
-  const u = `${API}?latitude=${l.lat}&longitude=${l.lon}`
-          + `&current=pm10,pm2_5,us_aqi&hourly=pm2_5,pm10`
-          + `&past_days=1&forecast_days=1&timezone=Asia%2FBangkok`;
-  const r = await fetch(u, {cache:"no-store"});
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  const j = await r.json();
-  const pm25 = j.current?.pm2_5, pm10 = j.current?.pm10;
-  const i25 = toIspu(pm25,"pm25"), i10 = toIspu(pm10,"pm10");
-  let ispu = null, kritis = "—";
-  if (i25 != null || i10 != null){
-    ispu = Math.max(i25 ?? -1, i10 ?? -1);
-    kritis = (i25 ?? -1) >= (i10 ?? -1) ? "PM2,5" : "PM10";
-  }
-  // riwayat 24 jam untuk grafik mini
-  const H = j.hourly?.time || [], P25 = j.hourly?.pm2_5 || [], P10 = j.hourly?.pm10 || [];
-  const now = j.current?.time;
-  let end = H.indexOf(now); if (end < 0) end = H.length - 1;
-  const seri = [];
-  for (let i = Math.max(0, end-23); i <= end; i++){
-    const a = toIspu(P25[i],"pm25"), b = toIspu(P10[i],"pm10");
-    seri.push((a==null&&b==null) ? null : Math.max(a ?? -1, b ?? -1));
-  }
-  return {...l, pm25, pm10, ispu, kritis, usAqi: j.current?.us_aqi ?? null, seri, jam: now};
-}
-async function ambilSemua(){
-  setNet("busy","mengambil data…");
-  const out = [];
-  for (let i = 0; i < LOK.length; i += 6){
-    const blok = LOK.slice(i, i+6);
-    const hasil = await Promise.allSettled(blok.map(ambilSatu));
-    hasil.forEach((h,k) => out.push(h.status === "fulfilled" ? h.value
-      : {...blok[k], ispu:null, pm25:null, pm10:null, usAqi:null, seri:[], galat:true}));
-    HASIL = out.slice(); render();
-  }
-  const paket = {waktu: new Date().toISOString(), data: out};
-  simpan(KEY_DATA, paket);
-  HASIL = out; stampDari(paket.waktu, false);
-  setNet("on","daring");
-  render();
-}
-
-/* ══════════════════ tampilan ══════════════════ */
-function setNet(mode, txt){
-  const d = document.getElementById("netDot");
-  d.className = "dot " + (mode === "on" ? "on" : mode === "busy" ? "busy" : "off");
-  document.getElementById("netTxt").textContent = txt;
-}
-function stampDari(iso, luring){
-  const t = new Date(iso);
-  const jam = t.toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
-  const selisih = Math.round((Date.now() - t.getTime())/3600000);
-  document.getElementById("stamp").textContent =
-    (luring ? "Tersimpan " : "Ditarik ") + jam + (selisih >= 1 ? ` · ${selisih} jam lalu` : "");
-}
-function spark(seri){
-  const v = seri.filter(x => x != null);
-  if (v.length < 3) return "";
-  const mx = Math.max(...v), mn = Math.min(...v), rng = (mx-mn) || 1;
-  const W = 260, Hh = 34;
-  const pts = seri.map((y,i) => y == null ? null
-    : [ (i/(seri.length-1))*W, Hh - 3 - ((y-mn)/rng)*(Hh-7) ]).filter(Boolean);
-  const d = pts.map((p,i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-  const area = d + ` L${W} ${Hh} L0 ${Hh} Z`;
-  const w = band(seri[seri.length-1]).warna;
-  return `<svg class="spark" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" aria-hidden="true">
-    <path d="${area}" fill="${w}" opacity=".16"></path>
-    <path d="${d}" fill="none" stroke="${w}" stroke-width="2" stroke-linejoin="round"></path></svg>`;
-}
-function efektif(r){
-  const m = MANUAL[r.id];
-  return (m != null && m !== "") ? {nilai:+m, tier:1} : {nilai:r.ispu, tier:3};
-}
-function render(){
-  // ringkasan
-  const eff = HASIL.map(efektif).map(e => e.nilai).filter(v => v != null);
-  const bahaya = eff.filter(v => v > 300).length, sangat = eff.filter(v => v > 200 && v <= 300).length;
-  const tertinggi = eff.length ? Math.max(...eff) : null;
-  const lokMax = HASIL.find(r => efektif(r).nilai === tertinggi);
-  const resmi = Object.values(MANUAL).filter(v => v !== "" && v != null).length;
-  const S = [
-    [HASIL.length, "lokasi dipantau", "#3a4147"],
-    [bahaya, "lokasi kategori Berbahaya", "#111111"],
-    [sangat, "lokasi Sangat Tidak Sehat", "#e02020"],
-    [tertinggi ?? "—", "ISPU tertinggi" + (lokMax ? " · " + lokMax.nama : ""), band(tertinggi).warna],
-    [resmi, "lokasi memakai ISPU resmi (Tier 1)", "#00a651"]
-  ];
-  document.getElementById("strip").innerHTML = S.map(([n,l,c]) =>
-    `<div class="stat"><span class="edge" style="background:${c}"></span>
-      <div class="n">${typeof n === "number" ? n.toLocaleString("id-ID") : n}</div>
-      <div class="l">${l}</div></div>`).join("");
-
-  document.getElementById("legend").innerHTML = BANDS.map(b =>
-    `<span style="background:${b.warna};color:${b.teks}">${b.nama}</span>`).join("");
-
-  // saring & urutkan
-  let d = HASIL.filter(r => (!filterPulau || r.pulau === filterPulau));
-  if (cari){
-    const s = cari.toLowerCase();
-    d = d.filter(r => (r.nama+r.provinsi+r.stasiunIspu+r.tipe).toLowerCase().includes(s));
-  }
-  const nilai = r => efektif(r).nilai ?? -1;
-  if (urut === "ispu") d.sort((a,b) => nilai(b) - nilai(a));
-  else if (urut === "nama") d.sort((a,b) => a.nama.localeCompare(b.nama,"id"));
-  else d.sort((a,b) => a.pulau.localeCompare(b.pulau) || nilai(b) - nilai(a));
-
-  document.getElementById("grid").innerHTML = d.map((r,i) => {
-    const e = efektif(r), b = band(e.nilai), lv = LEVEL(e.nilai);
-    const fmt = x => x == null ? "—" : x.toLocaleString("id-ID",{maximumFractionDigits:1});
-    return `<article class="card" style="animation-delay:${Math.min(i*22,320)}ms">
-      <div class="bar" style="background:${b.warna}"></div>
-      <div class="body">
-        <div class="row1">
-          <div><div class="nm">${r.nama}</div><div class="ty">${r.tipe} · ${r.provinsi}</div></div>
-          <span class="lvl" style="background:${b.warna};color:${b.teks}">${lv}</span>
-        </div>
-        <div class="big"><span class="v" style="color:${b.key==='bahaya'?'#ff6b6b':b.warna}">${e.nilai ?? "—"}</span>
-          <span class="u">ISPU${e.tier===3?"-setara":" resmi"}</span></div>
-        <span class="cat" style="background:${b.warna};color:${b.teks}">${b.nama}</span>
-        ${spark(r.seri || [])}
-        <div class="sub2">
-          PM2,5 <b>${fmt(r.pm25)}</b> µg/m³ · PM10 <b>${fmt(r.pm10)}</b> µg/m³<br>
-          Parameter kritis <b>${r.kritis || "—"}</b> · US AQI padanan <b>${r.usAqi ?? "—"}</b><br>
-          Usulan tindakan: <b>${LEVEL_TXT[lv] || "menunggu data"}</b>
-        </div>
-        <div class="src">
-          <span class="tag ${e.tier===1?"t1":""}">${e.tier===1?"Tier 1 · ISPU resmi":"Tier 3 · model Open-Meteo"}</span>
-          <span class="tag">${r.stasiunIspu}</span>
-        </div>
-        <div class="manual">
-          <input type="number" inputmode="numeric" placeholder="ISPU resmi"
-                 data-id="${r.id}" value="${MANUAL[r.id] ?? ""}">
-          <label>Isi dari ISPUnet bila stasiun resmi tersedia — angka ini menimpa hasil model</label>
-        </div>
-      </div></article>`;
-  }).join("") || `<div class="note">Tidak ada lokasi yang cocok dengan saringan ini.</div>`;
-
-  document.querySelectorAll(".manual input").forEach(el => {
-    el.addEventListener("change", ev => {
-      const id = ev.target.dataset.id, v = ev.target.value.trim();
-      if (v === "") delete MANUAL[id]; else MANUAL[id] = v;
-      simpan(KEY_MAN, MANUAL); render();
-    });
-  });
-}
-
-/* ══════════════════ CSV ══════════════════ */
-function unduhCsv(){
-  const H = ["Lokasi","Tipe","Provinsi","Pulau","Stasiun ISPU","PM2.5 (ug/m3)","PM10 (ug/m3)",
-             "ISPU dipakai","Sumber","Parameter kritis","US AQI","Kategori","Level","Jam data"];
-  const baris = HASIL.map(r => {
-    const e = efektif(r);
-    return [r.nama,r.tipe,r.provinsi,r.pulau,r.stasiunIspu,r.pm25 ?? "",r.pm10 ?? "",
-            e.nilai ?? "", e.tier===1?"ISPU resmi (Tier 1)":"Model Open-Meteo (Tier 3)",
-            r.kritis ?? "", r.usAqi ?? "", band(e.nilai).nama, LEVEL(e.nilai), r.jam ?? ""];
-  });
-  // pemisah titik koma: aman untuk Excel yang memakai koma sebagai desimal
-  const csv = "\uFEFF" + [H,...baris].map(b =>
-    b.map(x => `"${String(x).replace(/"/g,'""').replace(/\./g, ",")}"`).join(";")).join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-  a.download = `pantau-udara-hexindo-${new Date().toISOString().slice(0,10)}.csv`;
-  a.click(); URL.revokeObjectURL(a.href);
-}
-
-/* ══════════════════ mulai ══════════════════ */
-async function mulai(){
-  MANUAL = baca(KEY_MAN, {});
-  document.getElementById("grid").innerHTML =
-    Array.from({length:8}).map(()=>`<div class="skel"></div>`).join("");
-  try{
-    const r = await fetch("locations.json", {cache:"no-cache"});
-    LOK = (await r.json()).locations;
-  }catch(e){
-    const c = baca(KEY_DATA, null);
-    if (c) LOK = c.data; else {
-      document.getElementById("grid").innerHTML =
-        `<div class="note warn"><b>Daftar lokasi tidak terbaca.</b> Pastikan berkas locations.json berada di folder yang sama dengan index.html.</div>`;
-      return;
+/* ---------------- KONVERSI ---------------- */
+function interp(c, tbl) {
+  if (c == null || isNaN(c)) return null;
+  c = Math.max(0, c);
+  for (let i = 1; i < tbl.length; i++) {
+    if (c <= tbl[i][0] || i === tbl.length - 1) {
+      const [x0, y0] = tbl[i - 1], [x1, y1] = tbl[i];
+      return Math.round(y0 + (y1 - y0) * (c - x0) / (x1 - x0));
     }
   }
-  const simpanan = baca(KEY_DATA, null);
-  if (simpanan){ HASIL = simpanan.data; stampDari(simpanan.waktu, true); render(); }
-  else { HASIL = LOK.map(l => ({...l, ispu:null, seri:[]})); render(); }
-
-  if (navigator.onLine){ try{ await ambilSemua(); } catch(e){ setNet("off","gagal menarik data"); } }
-  else setNet("off","luring · menampilkan data tersimpan");
+  return null;
 }
-document.getElementById("refresh").onclick = () => navigator.onLine
-  ? ambilSemua().catch(() => setNet("off","gagal menarik data"))
-  : setNet("off","luring · tidak bisa memperbarui");
-document.getElementById("csv").onclick = unduhCsv;
-document.getElementById("q").oninput = e => { cari = e.target.value; render(); };
-document.getElementById("sort").onchange = e => { urut = e.target.value; render(); };
-document.querySelectorAll("#segPulau button").forEach(b => b.onclick = () => {
-  document.querySelectorAll("#segPulau button").forEach(x => x.classList.remove("sel"));
-  b.classList.add("sel"); filterPulau = b.dataset.v; render();
-});
-addEventListener("online",  () => { setNet("on","daring"); ambilSemua().catch(()=>{}); });
-addEventListener("offline", () => setNet("off","luring · menampilkan data tersimpan"));
-if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
-mulai();
+const ispu25 = c => interp(c, BP.pm25), ispu10 = c => interp(c, BP.pm10);
+const usAqi = (a, b) => { const v = maxN(interp(a, AQI.pm25), interp(b, AQI.pm10)); return v == null ? null : Math.min(500, v); };
+const hOf = i => (i == null ? null : CFG.LEVELS.find(l => i <= l[1])[0]);
+const catOf = i => (i == null ? null : i <= 50 ? "baik" : i <= 100 ? "sedang" : i <= 200 ? "tidak" : i <= 300 ? "sangat" : "bahaya");
+const bmkgOf = c => (c == null ? null : c <= 15.5 ? "baik" : c <= 55.4 ? "sedang" : c <= 150.4 ? "tidak" : c <= 250.4 ? "sangat" : "bahaya");
+const proj = (lat, lon) => [(lon - 94) * 20, (7 - lat) * 20];
+
+/* ---------------- TARIK DATA ---------------- */
+async function getJSON(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || j.error) throw new Error((j && j.reason) || "HTTP " + r.status);
+  return Array.isArray(j) ? j : [j];
+}
+async function pull() {
+  if (busy) return;
+  busy = true; lastErr = ""; drawStatus();
+  try {
+    const groups = {};
+    PTS.forEach(p => (groups[p.tz] = groups[p.tz] || []).push(p));
+    const out = {};
+    await Promise.all(Object.entries(groups).map(async ([tz, arr]) => {
+      const q = `latitude=${arr.map(p => p.lat).join(",")}&longitude=${arr.map(p => p.lon).join(",")}` +
+        `&past_days=${win}&forecast_days=${CFG.FORECAST_DAYS}&timezone=${encodeURIComponent(tz)}`;
+      const aq = await getJSON(`${CFG.AQ}?${q}&hourly=pm2_5,pm10`);
+      let wx = null;
+      try { wx = await getJSON(`${CFG.WX}?${q}&daily=precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant`); } catch (e) { /* cuaca bersifat pelengkap */ }
+      arr.forEach((p, i) => {
+        const h = aq[i] && aq[i].hourly;
+        if (!h || !h.time || !h.time.length) return;
+        const o = { tz, start: h.time[0].slice(0, 10), pm25: (h.pm2_5 || []).map(r1), pm10: (h.pm10 || []).map(r1) };
+        const d = wx && wx[i] && wx[i].daily;
+        if (d && d.time && d.time.length) o.w = { start: d.time[0], rain: d.precipitation_sum || [], wind: d.wind_speed_10m_max || [], wdir: d.wind_direction_10m_dominant || [] };
+        out[p.key] = o;
+      });
+    }));
+    if (!Object.keys(out).length) throw new Error("respons kosong");
+    db = { v: 2, at: Date.now(), win, pts: out };
+    if (!LS.set("pu2.db", db)) {            // penyimpanan penuh: simpan versi ringkas 14 hari terakhir
+      const slim = { v: 2, at: db.at, win: 14, pts: {} };
+      for (const [k, p] of Object.entries(out)) {
+        const keep = (14 + CFG.FORECAST_DAYS) * 24, cut = Math.max(0, p.pm25.length - keep), dcut = cut / 24;
+        slim.pts[k] = { tz: p.tz, start: addDays(p.start, dcut), pm25: p.pm25.slice(cut), pm10: p.pm10.slice(cut) };
+        if (p.w) slim.pts[k].w = { start: addDays(p.w.start, dcut), rain: p.w.rain.slice(dcut), wind: p.w.wind.slice(dcut), wdir: p.w.wdir.slice(dcut) };
+      }
+      LS.set("pu2.db", slim);
+    }
+    compute();
+  } catch (e) {
+    lastErr = e && e.message ? e.message : String(e);
+  }
+  busy = false;
+  renderAll();
+}
+
+/* ---------------- AGREGASI HARIAN ---------------- */
+function compute() {
+  agg = {}; Ecache = {}; S = null;
+  today = nowIn(CFG.TZ.WIB).date;
+  const set = new Set();
+  if (db) for (const [key, p] of Object.entries(db.pts)) {
+    const now = nowIn(p.tz), days = Math.floor(p.pm25.length / 24), o = {};
+    for (let d = 0; d < days; d++) {
+      const date = addDays(p.start, d); set.add(date);
+      const status = date < now.date ? "final" : date === now.date ? "partial" : "forecast";
+      const lastH = status === "partial" ? now.hour : 23;
+      let s25 = 0, n25 = 0, s10 = 0, n10 = 0, peak = null; const hrs = [];
+      for (let h = 0; h < 24; h++) {
+        const a = p.pm25[d * 24 + h], b = p.pm10[d * 24 + h], iH = maxN(ispu25(a), ispu10(b));
+        hrs.push(iH);
+        if (h <= lastH) {
+          if (a != null) { s25 += a; n25++; }
+          if (b != null) { s10 += b; n10++; }
+          if (iH != null && (!peak || iH > peak.ispu)) peak = { ispu: iH, hour: h };
+        }
+      }
+      const m25 = n25 ? s25 / n25 : null, m10 = n10 ? s10 / n10 : null, i25 = ispu25(m25), i10 = ispu10(m10), ispu = maxN(i25, i10);
+      const r = { status, lastH, n: Math.max(n25, n10), m25, m10, ispu, crit: ispu == null ? null : ((i25 ?? -1) >= (i10 ?? -1) ? "PM2.5" : "PM10"), peak, hrs };
+      if (p.w) { const k = diffDays(p.w.start, date); if (k >= 0 && k < p.w.rain.length) { r.rain = p.w.rain[k]; r.wind = p.w.wind[k]; r.wdir = p.w.wdir[k]; } }
+      o[date] = r;
+    }
+    agg[key] = o;
+  }
+  dates = [...set].sort();
+  if (!sel || !dates.includes(sel)) sel = dates.includes(today) ? today : (dates[dates.length - 1] || today);
+}
+/* Angka yang berlaku untuk satu lokasi pada satu tanggal: resmi (manual) lebih dulu, lalu model */
+function val(l, date) {
+  const c = Ecache[date] || (Ecache[date] = {});
+  if (c[l.id]) return c[l.id];
+  const a = (agg[l.key] || {})[date] || null, man = manual[l.id + "|" + date];
+  let ispu = null, src = "none";
+  const sh = shared[l.id + "|" + date];
+  if (man != null && !isNaN(man)) { ispu = +man; src = "resmi"; }
+  else if (sh && sh.ispu != null) { ispu = +sh.ispu; src = "berkas"; }
+  else if (a && a.ispu != null) { ispu = a.ispu; src = a.status === "forecast" ? "fc" : "model"; }
+  return (c[l.id] = { ispu, src, a, h: hOf(ispu) });
+}
+function series() {
+  if (S) return S;
+  S = { cnt: {}, mean: {}, max: {} };
+  for (const d of dates) {
+    const c = { H1: 0, H2: 0, H3: 0, H4: 0, ND: 0 }, sum = { nas: [0, 0], barat: [0, 0], timur: [0, 0], tambang: [0, 0], fasilitas: [0, 0] };
+    let mx = null;
+    for (const l of LOK) {
+      const v = val(l, d);
+      c[v.h || "ND"]++;
+      if (v.ispu != null) { sum.nas[0] += v.ispu; sum.nas[1]++; sum[l.wilayah][0] += v.ispu; sum[l.wilayah][1]++; if (!mx || v.ispu > mx.ispu) mx = { ispu: v.ispu, l }; }
+    }
+    S.cnt[d] = c; S.max[d] = mx; S.mean[d] = {};
+    for (const k in sum) S.mean[d][k] = sum[k][1] ? sum[k][0] / sum[k][1] : null;
+  }
+  return S;
+}
+const srcKey = s => ({ resmi: "srcResmi", berkas: "srcBerkas", fc: "srcFc", model: "srcModel" }[s]);
+const dayStatus = d => (d < today ? "final" : d === today ? "partial" : "forecast");
+function setDate(d) { if (!dates.includes(d)) return; sel = d; renderAll(); }
+function setManual(id, date, raw) {
+  const k = id + "|" + date, v = String(raw).trim().replace(",", ".");
+  if (v === "" || isNaN(+v) || +v < 0) delete manual[k]; else manual[k] = Math.round(+v);
+  LS.set("pu2.manual", manual); Ecache = {}; S = null; renderAll();
+}
+
+/* ---------------- KERANGKA DAN STATUS ---------------- */
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i]").forEach(e => (e.textContent = t(e.dataset.i)));
+  document.querySelectorAll("#langBox button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  $("#dPrev").setAttribute("aria-label", t("prev")); $("#dNext").setAttribute("aria-label", t("next")); $("#dPick").setAttribute("aria-label", t("pick"));
+  $("#fQ").placeholder = t("search"); $("#fQ").setAttribute("aria-label", t("search"));
+  const opt = (v, s, cur) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(s)}</option>`;
+  $("#fWil").innerHTML = opt("all", t("allWil"), filt.wil) + WILS.map(w => opt(w, t("w_" + w), filt.wil)).join("");
+  $("#fTipe").innerHTML = opt("all", t("allTipe"), filt.tipe) + TIPES.map(w => opt(w, t("t_" + w), filt.tipe)).join("");
+  $("#fLvl").innerHTML = opt("all", t("allLvl"), filt.lvl) + ["H1", "H2", "H3", "H4"].map(h => opt(h, h + " " + t("hn_" + h), filt.lvl)).join("") + opt("ND", t("legNd"), filt.lvl);
+  $("#fSort").innerHTML = opt("worst", t("sWorst"), filt.sort) + opt("base", t("sBase"), filt.sort) + opt("name", t("sName"), filt.sort);
+  ["fWil", "fTipe", "fLvl", "fSort"].forEach(id => $("#" + id).setAttribute("aria-label", $("#" + id).options[0].text));
+  $("#viewBtns").innerHTML = Object.keys(VIEWS).map(v => `<button type="button" class="chipbtn" data-v="${v}" aria-pressed="${v === view}">${esc(t("v_" + v))}</button>`).join("") +
+    `<span class="sp"></span><button type="button" class="chipbtn" id="btnPlay"></button>`;
+  drawMethod();
+  $("#foot").innerHTML = `<p>${esc(t("decision"))}</p><p>${esc(t("foot"))}</p>`;
+}
+function drawStatus() {
+  const b = $("#btnPull"); b.disabled = busy; b.textContent = busy ? t("pulling") : t("pull");
+  const on = navigator.onLine;
+  const when = db ? t("pulled", { t: new Intl.DateTimeFormat(loc(), { dateStyle: "medium", timeStyle: "short", timeZone: CFG.TZ.WIB }).format(new Date(db.at)) + " WIB" }) : t("never");
+  $("#status").innerHTML = `<span><i class="dot${on ? "" : " off"}"></i>${esc(on ? t("online") : t("offline"))}</span><span>${esc(when)}</span>` +
+    `<label>${esc(t("history"))} <select id="winSel" style="background:#262c30;color:#fff;border:1px solid #3b444a;border-radius:3px">` +
+    CFG.WINDOWS.map(w => `<option value="${w}"${w === win ? " selected" : ""}>${esc(t("days", { n: w }))}</option>`).join("") + `</select></label>` +
+    (lastErr ? `<span class="err">${esc(t("failed", { m: lastErr }))}</span>` : "");
+  const pb = $("#btnPlay"); if (pb) { pb.textContent = playing ? t("pause") : t("play"); pb.setAttribute("aria-pressed", String(!playing)); }
+  document.body.classList.toggle("still", !playing);
+  $("#tabs").style.top = $(".bar").offsetHeight + "px";
+}
+function renderAll() {
+  drawStatus();
+  const has = dates.length > 0;
+  $("#emptyBox").hidden = has; $("#heroBox").hidden = !has;
+  $("#tren").hidden = !has; $("#lokasi").hidden = !has;
+  if (!has) {
+    $("#h1").textContent = "Pantau Udara Hexindo"; $("#dayBadge").hidden = true;
+    $("#emptyBox").innerHTML = `<b>${esc(t("emptyT"))}</b>${esc(t("emptyB"))}`;
+    return;
+  }
+  const st = dayStatus(sel);
+  $("#h1").textContent = t("h1", { d: fLong(sel) });
+  const bd = $("#dayBadge"); bd.hidden = false; bd.className = "badge " + st; bd.textContent = t(st === "final" ? "bFinal" : st === "partial" ? "bPartial" : "bForecast");
+  const dp = $("#dPick"); dp.min = dates[0]; dp.max = dates[dates.length - 1]; dp.value = sel;
+  $("#dPrev").disabled = sel === dates[0]; $("#dNext").disabled = sel === dates[dates.length - 1];
+  drawMap(); drawTiles(); drawRank(); drawScrub(); drawLines(); drawComp(); drawHeat(); drawTable();
+  if (detailId) drawDetail();
+}
+
+/* ---------------- PETA ---------------- */
+function pointsNow() {
+  const m = new Map();
+  for (const l of LOK) {
+    const v = val(l, sel); let p = m.get(l.key);
+    if (!p) { const [x, y] = proj(l.lat, l.lon); m.set(l.key, (p = { key: l.key, x, y, ls: [], ispu: null, a: v.a })); }
+    p.ls.push(l); p.ispu = maxN(p.ispu, v.ispu);
+  }
+  return [...m.values()];
+}
+function drawMap() {
+  const V = VIEWS[view], wrap = $("#mapwrap");
+  wrap.style.aspectRatio = V[2] + " / " + V[3];
+  $("#mapLand").setAttribute("viewBox", V.join(" ")); $("#mapPts").setAttribute("viewBox", V.join(" "));
+  const wpx = wrap.clientWidth || 900, k = wpx / V[2], r = (wpx < 520 ? 4.6 : 6.5) / k, fs = (wpx < 520 ? 10.5 : 12) / k;
+  const pts = pointsNow().sort((a, b) => (a.ispu ?? -1) - (b.ispu ?? -1));
+  const inView = p => p.x >= V[0] && p.x <= V[0] + V[2] && p.y >= V[1] && p.y <= V[1] + V[3];
+  const top = new Set(pts.filter(p => p.ispu != null && p.ispu > 100).slice(-5).map(p => p.key));
+  let s = "";
+  for (const p of pts) {
+    if (!inView(p)) continue;
+    const h = hOf(p.ispu), isSel = detailId && p.ls.some(l => l.id === detailId);
+    const names = p.ls.map(l => l.nama).join(", ");
+    const lab = isSel || (view === "nas" ? wpx >= 520 && top.has(p.key) : true);
+    const left = p.x > V[0] + V[2] * 0.82;
+    s += `<g class="mk${isSel ? " sel" : ""}" data-id="${p.ls[0].id}" tabindex="0" role="button" aria-label="${esc(names)}: ${h ? h + ", ISPU " + p.ispu : t("legNd")}">` +
+      `<title>${esc(names)}: ${h ? h + " " + t("hn_" + h) + ", ISPU " + fmt(p.ispu) : t("legNd")}</title>` +
+      (h === "H3" || h === "H4" ? `<circle class="pulse" cx="${p.x}" cy="${p.y}" r="${r}" stroke="${HCOL[h]}"/>` : "") +
+      `<circle class="rim" cx="${p.x}" cy="${p.y}" r="${r * 1.28}"/>` +
+      `<circle class="core" cx="${p.x}" cy="${p.y}" r="${r}" fill="${h ? HCOL[h] : "#f6f8f8"}"${h ? "" : ' stroke-dasharray="2 2"'}/>` +
+      (lab ? `<text x="${p.x + (left ? -1 : 1) * r * 1.7}" y="${p.y + fs * 0.35}" font-size="${fs}" stroke-width="${fs * 0.28}" text-anchor="${left ? "end" : "start"}">${esc(p.ls[0].nama)}${p.ls.length > 1 ? " +" + (p.ls.length - 1) : ""}</text>` : "") +
+      `</g>`;
+  }
+  $("#mapPts").innerHTML = s;
+  $("#mapLegend").innerHTML = ["H1", "H2", "H3", "H4"].map(h => `<span class="key"><i class="sw" style="background:${HCOL[h]}"></i>${h} ${esc(t("hn_" + h))}</span>`).join("") +
+    `<span class="key"><i class="sw" style="background:#f6f8f8"></i>${esc(t("legNd"))}</span><span>${esc(t("legSmoke"))}</span>`;
+  document.querySelectorAll("#viewBtns [data-v]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
+  // sumber asap untuk animasi
+  smoke.em = pts.filter(p => p.ispu != null && p.ispu > 100).map(p => {
+    const a = p.a || {}, to = ((a.wdir ?? 90) + 180) * Math.PI / 180, lvl = p.ispu > 300 ? 4 : p.ispu > 200 ? 3 : 2;
+    return { x: p.x, y: p.y, lvl, rate: 3 + Math.min(16, p.ispu / 40), ux: Math.sin(to), uy: -Math.cos(to), spd: clamp(2 + (a.wind ?? 8) * 0.25, 2, 9) };
+  });
+  const total = smoke.em.reduce((s, e) => s + e.rate, 0) * 6.5;
+  smoke.scale = total > 650 ? 650 / total : 1;
+  smoke.resize(); smoke.kick();
+}
+const smoke = {
+  parts: [], em: [], scale: 1, raf: 0, last: 0, vis: true, cv: null, cx: null, spr: {},
+  init() {
+    this.cv = $("#smoke"); this.cx = this.cv.getContext("2d");
+    for (const [k, rgb] of [[2, "128,112,92"], [3, "98,80,64"], [4, "30,25,22"]]) {
+      const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+      const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, `rgba(${rgb},.6)`); gr.addColorStop(0.55, `rgba(${rgb},.25)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+      g.fillStyle = gr; g.fillRect(0, 0, 64, 64); this.spr[k] = c;
+    }
+    if ("IntersectionObserver" in window) new IntersectionObserver(e => { this.vis = e[0].isIntersecting; this.kick(); }).observe(this.cv);
+    document.addEventListener("visibilitychange", () => this.kick());
+  },
+  resize() {
+    const w = this.cv.clientWidth, h = this.cv.clientHeight, d = Math.min(2, window.devicePixelRatio || 1);
+    if (this.cv.width !== Math.round(w * d) || this.cv.height !== Math.round(h * d)) { this.cv.width = Math.round(w * d); this.cv.height = Math.round(h * d); }
+  },
+  step(dt) {
+    for (const e of this.em) {
+      let n = e.rate * this.scale * dt; n = Math.floor(n) + (Math.random() < n % 1 ? 1 : 0);
+      while (n-- > 0) {
+        const j = (Math.random() - 0.5) * 0.9, sp = e.spd * (0.55 + Math.random() * 0.9);
+        this.parts.push({ x: e.x + (Math.random() - 0.5) * 3, y: e.y + (Math.random() - 0.5) * 3, vx: (e.ux - e.uy * j) * sp, vy: (e.uy + e.ux * j) * sp, age: 0, life: 4.5 + Math.random() * 4, lvl: e.lvl, s0: 3 + Math.random() * 3 });
+      }
+    }
+    for (const p of this.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+    this.parts = this.parts.filter(p => p.age < p.life);
+  },
+  draw() {
+    const V = VIEWS[view], c = this.cx, k = this.cv.width / V[2], zf = Math.pow(960 / V[2], 0.5);
+    c.clearRect(0, 0, this.cv.width, this.cv.height);
+    for (const p of this.parts) {
+      const u = p.age / p.life, size = (p.s0 + u * (p.lvl === 4 ? 22 : p.lvl === 3 ? 17 : 13)) * k / zf;
+      c.globalAlpha = Math.sin(Math.PI * u) * (p.lvl === 4 ? 0.8 : p.lvl === 3 ? 0.7 : 0.55);
+      c.drawImage(this.spr[p.lvl], (p.x - V[0]) * k - size, (p.y - V[1]) * k - size, size * 2, size * 2);
+    }
+    c.globalAlpha = 1;
+  },
+  kick() {
+    cancelAnimationFrame(this.raf); this.raf = 0;
+    if (!this.cv) return;
+    if (!playing) {                       // gambar diam: tetap memperlihatkan arah dan kepekatan
+      this.parts = []; for (let i = 0; i < 160; i++) this.step(0.05); this.draw(); return;
+    }
+    if (!this.vis || document.hidden) return;
+    this.last = 0;
+    const loop = ts => {
+      const dt = this.last ? Math.min(0.06, (ts - this.last) / 1000) : 0.016; this.last = ts;
+      this.step(dt); this.draw(); this.raf = requestAnimationFrame(loop);
+    };
+    this.raf = requestAnimationFrame(loop);
+  },
+};
+
+/* ---------------- RINGKASAN ---------------- */
+function drawTiles() {
+  const c = series().cnt[sel], i = dates.indexOf(sel), p = i > 0 ? series().cnt[dates[i - 1]] : null;
+  $("#tiles").innerHTML = ["H1", "H2", "H3", "H4"].map(h => {
+    const d = p ? c[h] - p[h] : null;
+    const dl = d == null ? "" : d > 0 ? t("dUp", { n: d }) : d < 0 ? t("dDown", { n: -d }) : t("dSame");
+    return `<button type="button" class="tile ${h}" data-h="${h}" aria-pressed="${filt.lvl === h}"><span class="lv">${h} ${esc(t("hn_" + h))}</span><span class="ct">${c[h]}</span><span class="dl">${esc(dl)}</span></button>`;
+  }).join("");
+  $("#ndLine").textContent = c.ND ? t("ndLine", { n: c.ND }) : "";
+}
+function drawRank() {
+  const rows = LOK.map(l => ({ l, v: val(l, sel) })).filter(r => r.v.ispu != null).sort((a, b) => b.v.ispu - a.v.ispu).slice(0, 8);
+  const mx = rows.length ? Math.max(rows[0].v.ispu, 100) : 1;
+  $("#rank").innerHTML = rows.length ? rows.map(r => `<li data-id="${r.l.id}"><span class="hx ${r.v.h}">${r.v.h}</span><span class="nm"><b>${esc(r.l.nama)}</b>` +
+    `<span class="bar2" style="display:block;width:${Math.max(3, r.v.ispu / mx * 100)}%;background:${HCOL[r.v.h]}"></span></span><span class="v num">${fmt(r.v.ispu)}</span></li>`).join("")
+    : `<li style="display:block;color:var(--mute);cursor:default">${esc(t("rankEmpty"))}</li>`;
+}
+
+/* ---------------- GRAFIK TREN ---------------- */
+function drawScrub() {
+  const box = $("#scrub"), W = Math.max(300, box.clientWidth), H = 190, ml = 30, mr = 6, mt = 22, mb = 26, n = dates.length, cw = (W - ml - mr) / n, N = LOK.length;
+  const y = v => mt + (H - mt - mb) * (1 - v / N), C = series().cnt, step = Math.ceil(52 / cw);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(t("scrubTitle"))}">`;
+  for (const v of [0, Math.round(N / 2), N]) s += `<line class="ax" x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}"/><text x="${ml - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  dates.forEach((d, i) => {
+    const c = C[d], x = ml + i * cw, pad = Math.min(2, cw * 0.12), fc = d > today; let acc = 0;
+    for (const h of ["H4", "H3", "H2", "H1", "ND"]) {
+      if (!c[h]) continue;
+      s += `<rect x="${x + pad}" width="${cw - 2 * pad}" y="${y(acc + c[h])}" height="${y(acc) - y(acc + c[h])}" fill="${HCOL[h]}"${fc ? ' opacity=".5"' : ""}/>`; acc += c[h];
+    }
+    if (d === sel) s += `<rect x="${x + 0.5}" width="${cw - 1}" y="${mt - 2}" height="${H - mt - mb + 4}" fill="none" stroke="#6a3fb5" stroke-width="2.5"/><path d="M${x + cw / 2 - 5},${H - mb + 4}h10l-5,-6z" fill="#6a3fb5" transform="translate(0,6)"/>`;
+    if (d === today) s += `<text x="${x + cw}" y="13" text-anchor="end" style="fill:#15191c;font-weight:600">${esc(t("isToday"))}</text>`;
+    if (d === addDays(today, 1)) s += `<text x="${x + 3}" y="13">${esc(t("isFc"))}</text><line class="ax" x1="${x}" x2="${x}" y1="${mt - 6}" y2="${H - mb}" stroke-dasharray="3 3" style="stroke:#56626a"/>`;
+    if (i % step === 0 && x + 40 < W) s += `<text x="${x + cw / 2}" y="${H - 4}" text-anchor="middle"${d === sel ? ' style="fill:#6a3fb5;font-weight:700"' : ""}>${esc(fShort(d))}</text>`;
+    s += `<rect class="hit" data-d="${d}" x="${x}" width="${cw}" y="${mt - 4}" height="${H - mt - mb + 8}"><title>${esc(fMid(d))}: H1 ${c.H1}, H2 ${c.H2}, H3 ${c.H3}, H4 ${c.H4}</title></rect>`;
+  });
+  box.innerHTML = s + "</svg>";
+  $("#trendSub").textContent = t("trendSub", { a: fMid(dates[0]), b: fMid(dates[dates.length - 1]), n: N });
+}
+function drawLines() {
+  const box = $("#lines"), W = Math.max(300, box.clientWidth), H = 250, ml = 40, mr = 8, mt = 12, mb = 26, n = dates.length, cw = (W - ml - mr) / n, M = series().mean;
+  let mx = 320; for (const d of dates) for (const k in SER) if (M[d][k] != null) mx = Math.max(mx, M[d][k] * 1.08);
+  mx = niceMax(mx);
+  const y = v => mt + (H - mt - mb) * (1 - v / mx), xc = i => ml + (i + 0.5) * cw, step = Math.ceil(52 / cw);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(t("lineTitle"))}">`;
+  const bands = [[0, 100, "H1"], [100, 200, "H2"], [200, 300, "H3"], [300, mx, "H4"]];
+  for (const [a, b, h] of bands) s += `<rect x="${ml - 5}" width="4" y="${y(b)}" height="${y(a) - y(b)}" fill="${HCOL[h]}"/><text x="${ml + 4}" y="${y(a) - 5}" style="font-weight:700;fill:#15191c;opacity:.55">${h}</text>`;
+  for (const v of [0, 100, 200, 300].concat(mx > 300 ? [mx] : [])) s += `<line class="ax" x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}"${v && v < mx ? ' stroke-dasharray="4 4"' : ""}/><text x="${ml - 9}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+  const iT = dates.indexOf(today);
+  if (iT >= 0 && iT < n - 1) s += `<rect x="${ml + (iT + 1) * cw}" width="${(n - iT - 1) * cw}" y="${mt}" height="${H - mt - mb}" fill="#15191c" opacity=".06"/>`;
+  const iS = dates.indexOf(sel); s += `<line x1="${xc(iS)}" x2="${xc(iS)}" y1="${mt}" y2="${H - mb}" stroke="#6a3fb5" stroke-width="2"/>`;
+  for (const k of ["barat", "timur", "tambang", "nas"]) {
+    let d = "", pen = false;
+    dates.forEach((dt, i) => { const v = M[dt][k]; if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + xc(i).toFixed(1) + "," + y(v).toFixed(1); pen = true; });
+    s += `<path d="${d}" fill="none" stroke="${SER[k][0]}" stroke-width="${k === "nas" ? 3.2 : 2}" stroke-linejoin="round"${SER[k][1] ? ` stroke-dasharray="${SER[k][1]}"` : ""}/>`;
+    const v = M[sel][k]; if (v != null) s += `<circle cx="${xc(iS)}" cy="${y(v)}" r="4" fill="${SER[k][0]}" stroke="#f6f8f8" stroke-width="1.5"/>`;
+  }
+  dates.forEach((d, i) => {
+    if (i % step === 0 && ml + i * cw + 40 < W) s += `<text x="${xc(i)}" y="${H - 4}" text-anchor="middle">${esc(fShort(d))}</text>`;
+    const m = M[d]; s += `<rect class="hit" data-d="${d}" x="${ml + i * cw}" width="${cw}" y="${mt}" height="${H - mt - mb}"><title>${esc(fMid(d))}: ${["nas", "barat", "timur", "tambang"].map(k => (k === "nas" ? t("s_nas") : t("w_" + k)) + " " + fmt(m[k])).join(", ")}</title></rect>`;
+  });
+  box.innerHTML = s + "</svg>";
+  $("#lineLegend").innerHTML = ["nas", "barat", "timur", "tambang"].map(k => `<span><i style="border-top-color:${SER[k][0]};border-top-style:${SER[k][1] ? "dashed" : "solid"}"></i>${esc(k === "nas" ? t("s_nas") : t("w_" + k))} <b class="num">${fmt(M[sel][k])}</b></span>`).join("");
+}
+function drawComp() {
+  $("#compTitle").textContent = t("compTitle", { d: fShort(sel) });
+  $("#comp").innerHTML = WILS.map(w => {
+    const ls = LOK.filter(l => l.wilayah === w), c = { H1: 0, H2: 0, H3: 0, H4: 0, ND: 0 };
+    ls.forEach(l => c[val(l, sel).h || "ND"]++);
+    return `<span>${esc(t("w_" + w))}</span><span class="stack">` + ["H4", "H3", "H2", "H1", "ND"].filter(h => c[h]).map(h =>
+      `<span style="width:${c[h] / ls.length * 100}%;background:${HCOL[h]};color:${h === "H2" || h === "ND" ? "#15191c" : "#fff"};font:700 12.5px/22px var(--disp);text-align:center" title="${h === "ND" ? esc(t("legNd")) : h}: ${c[h]}">${c[h]}</span>`).join("") +
+      `</span><span class="num">${ls.length} ${esc(t("locs"))}</span>`;
+  }).join("");
+}
+function drawHeat() {
+  let s = `<thead><tr><th>${esc(t("location"))}</th>` + dates.map(d => `<td class="${d === sel ? "on" : ""}" title="${esc(fMid(d))}">${+d.slice(8)}${+d.slice(8) === 1 || d === dates[0] ? "<br>" + esc(new Intl.DateTimeFormat(loc(), { month: "short", timeZone: "UTC" }).format(dObj(d))) : ""}</td>`).join("") + `</tr></thead><tbody>`;
+  for (const w of WILS) {
+    s += `<tr class="grp"><th>${esc(t("w_" + w))}</th><td colspan="${dates.length}"></td></tr>`;
+    for (const l of LOK.filter(l => l.wilayah === w)) {
+      s += `<tr><th data-id="${l.id}" title="${esc(l.nama)}">${esc(l.nama)}</th>` + dates.map(d => {
+        const v = val(l, d);
+        return `<td class="c${d > today ? " fc" : ""}${d === sel ? " on" : ""}" data-id="${l.id}" data-d="${d}" style="background:${HCOL[v.h || "ND"]}" title="${esc(l.nama)}, ${esc(fShort(d))}: ${v.h ? v.h + ", ISPU " + fmt(v.ispu) : esc(t("legNd"))}"></td>`;
+      }).join("") + `</tr>`;
+    }
+  }
+  $("#heat").innerHTML = s + "</tbody>";
+}
+
+/* ---------------- TABEL LOKASI ---------------- */
+function filtered() {
+  const q = filt.q.trim().toLowerCase();
+  let rows = LOK.map((l, i) => ({ l, i, v: val(l, sel) })).filter(r =>
+    (filt.wil === "all" || r.l.wilayah === filt.wil) && (filt.tipe === "all" || r.l.tipe === filt.tipe) &&
+    (filt.lvl === "all" || (r.v.h || "ND") === filt.lvl) && (!q || (r.l.nama + " " + r.l.provinsi).toLowerCase().includes(q)));
+  if (filt.sort === "worst") rows.sort((a, b) => (b.v.ispu ?? -1) - (a.v.ispu ?? -1) || a.i - b.i);
+  else if (filt.sort === "name") rows.sort((a, b) => a.l.nama.localeCompare(b.l.nama));
+  return rows;
+}
+function drawTable() {
+  const rows = filtered(), prev = dates[dates.indexOf(sel) - 1];
+  $("#locSub").textContent = t("locSub", { n: rows.length, N: LOK.length });
+  let s = `<thead><tr><th>${esc(t("cLevel"))}</th><th>${esc(t("cLoc"))}</th><th>${esc(t("cWil"))}</th><th class="r">${esc(t("cIspu"))}</th><th>${esc(t("cCat"))}</th><th class="r">PM2,5</th><th class="r">PM10</th><th class="r">${esc(t("cAqi"))}</th><th>${esc(t("cBmkg"))}</th><th class="r">${esc(t("cRain"))}</th><th class="r">${esc(t("cDelta"))}</th><th class="r">${esc(t("cMan"))}</th></tr></thead><tbody>`;
+  for (const { l, v } of rows) {
+    const a = v.a || {}, cat = catOf(v.ispu), bm = bmkgOf(a.m25), pv = prev ? val(l, prev).ispu : null;
+    const dlt = v.ispu != null && pv != null ? v.ispu - pv : null, man = manual[l.id + "|" + sel], sh = shared[l.id + "|" + sel];
+    s += `<tr data-id="${l.id}"><td class="c-h"><span class="hx ${v.h || "ND"}">${v.h || "–"}</span></td>` +
+      `<td class="nm"><b>${esc(l.nama)}</b><small>${esc(t("t_" + l.tipe))}, ${esc(l.provinsi)}</small></td>` +
+      `<td class="c-w">${esc(t("w_" + l.wilayah))}</td>` +
+      `<td class="r c-i"><span class="big num">${fmt(v.ispu)}</span><br><span class="src ${v.src}">${v.src === "none" ? "" : esc(t(srcKey(v.src)))}</span></td>` +
+      `<td class="c-x" data-l="${esc(t("cCat"))}">${cat ? `<span class="cat ${cat}">${esc(t("k_" + cat))}</span>` : "–"}</td>` +
+      `<td class="r c-x c-d num" data-l="PM2,5 (µg/m³)">${fmt(a.m25, 1)}</td><td class="r c-x c-d num" data-l="PM10 (µg/m³)">${fmt(a.m10, 1)}</td>` +
+      `<td class="r c-x c-d num" data-l="${esc(t("cAqi"))}">${fmt(usAqi(a.m25, a.m10))}</td>` +
+      `<td class="c-x c-d" data-l="${esc(t("cBmkg"))}">${bm ? `<span class="cat ${bm}">${esc(t("k_" + bm))}</span>` : "–"}</td>` +
+      `<td class="r c-x c-d num" data-l="${esc(t("cRain"))}">${fmt(a.rain, 1)}</td>` +
+      `<td class="r c-x c-d" data-l="${esc(t("cDelta"))}">${dlt == null ? "–" : `<span class="${dlt > 0 ? "up" : dlt < 0 ? "dn" : "eq"} num">${dlt > 0 ? "+" : ""}${fmt(dlt)}</span>`}</td>` +
+      `<td class="r c-x" data-l="${esc(t("cMan"))}"><input class="man${man != null ? " filled" : ""}" type="number" inputmode="numeric" min="0" max="9999" data-man="${l.id}" value="${man ?? ""}" placeholder="${sh ? sh.ispu : esc(t("manPh"))}" aria-label="${esc(t("cMan"))} ${esc(l.nama)}"></td></tr>`;
+  }
+  $("#tbl").innerHTML = s + "</tbody>";
+}
+
+/* ---------------- PANEL RINCIAN ---------------- */
+function sceneHTML(ispu, h, a) {
+  const dens = clamp((ispu ?? 0) / 350, 0, 1.15), far = clamp(1 - dens * 2.4, 0, 1), mid = clamp(1 - dens * 1.25, 0, 1), near = Math.max(0.35, 1 - dens * 0.5);
+  const sun = { H1: "#fff2a8", H2: "#ffd98a", H3: "#ff9d5c", H4: "#d8553a" }[h || "H1"], dur = clamp(240 / ((a && a.wind != null ? a.wind : 8) + 4), 10, 60);
+  return `<div class="scene ${h || "H1"}"><svg viewBox="0 0 480 150" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <circle cx="392" cy="40" r="17" fill="${sun}" opacity="${clamp(1.05 - dens * 0.6, 0.35, 1)}"/>
+    <g opacity="${far}" fill="#5d6b66"><path d="M0,112 40,100 90,106 150,92 210,104 280,90 350,102 420,94 480,104V126H0Z"/><rect x="300" y="56" width="3" height="42"/><path d="M294,58h15l-7.5,-9z"/></g>
+    <g opacity="${mid}" fill="#2c3336" transform="translate(232,90)"><path d="M0,10 62,3 67,24H4Z"/><rect x="66" y="9" width="17" height="17"/><circle cx="15" cy="30" r="8"/><circle cx="50" cy="30" r="8"/><circle cx="74" cy="30" r="7"/></g>
+    <rect y="124" width="480" height="26" fill="#343a37"/>
+    <g opacity="${near}" fill="#1b1f21" transform="translate(36,58)"><rect x="8" y="56" width="74" height="13" rx="6.5"/><rect x="20" y="38" width="48" height="19"/><rect x="48" y="22" width="20" height="18"/><path d="M58,38 92,5 99,10 67,44Z"/><path d="M92,5 114,34 107,39 89,13Z"/><path d="M106,33 118,45 105,52 99,40Z"/></g>
+    </svg><div class="haze" style="opacity:${Math.min(0.85, dens * 0.75)};animation-duration:${dur}s"></div><div class="haze b" style="opacity:${Math.min(0.6, dens * 0.5)};animation-duration:${dur * 1.7}s"></div></div>`;
+}
+function barsSVG(vals, o) {
+  // grafik batang sederhana berwarna level; o: {W,H,labels(i),faded(i),selI,hitAttr(i),title(i)}
+  const W = o.W, H = o.H, ml = 34, mr = 4, mt = 8, mb = 20, n = vals.length, cw = (W - ml - mr) / n;
+  const mx = niceMax(Math.max(150, ...vals.map(v => v ?? 0)) * 1.02), y = v => mt + (H - mt - mb) * (1 - Math.min(v, mx) / mx);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(o.label)}">`;
+  for (const v of [0, 100, 200, 300].filter(v => v <= mx).concat(mx > 300 ? [mx] : [])) s += `<line class="ax" x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}"${v ? ' stroke-dasharray="3 4"' : ""}/><text x="${ml - 5}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+  vals.forEach((v, i) => {
+    const x = ml + i * cw, pad = Math.min(1.5, cw * 0.12), lb = o.labels(i);
+    if (v != null) s += `<rect x="${x + pad}" width="${cw - 2 * pad}" y="${y(v)}" height="${Math.max(1.5, y(0) - y(v))}" fill="${HCOL[hOf(v)]}"${o.faded(i) ? ' opacity=".4"' : ""}/>`;
+    if (o.selI === i) s += `<rect x="${x + 0.5}" width="${cw - 1}" y="${mt}" height="${H - mt - mb}" fill="none" stroke="#6a3fb5" stroke-width="2"/>`;
+    if (lb) s += `<text x="${x + cw / 2}" y="${H - 4}" text-anchor="middle">${esc(lb)}</text>`;
+    if (o.hit) s += `<rect class="hit" ${o.hit(i)} x="${x}" width="${cw}" y="${mt}" height="${H - mt - mb}"><title>${esc(o.title(i))}</title></rect>`;
+  });
+  return s + "</svg>";
+}
+function drawDetail() {
+  const l = LOK.find(x => x.id === detailId); if (!l) return;
+  const v = val(l, sel), a = v.a || {}, h = v.h, cat = catOf(v.ispu), bm = bmkgOf(a.m25), man = manual[l.id + "|" + sel];
+  const W = Math.min(444, window.innerWidth - 36), same = LOK.filter(x => x.key === l.key && x.id !== l.id).map(x => x.nama);
+  const comp = a.wdir == null ? "" : t("compass")[Math.round(a.wdir / 45) % 8];
+  const stat = (k, b) => `<div><small>${esc(k)}</small><b>${b}</b></div>`;
+  const step = Math.ceil(dates.length / 6);
+  let s = `<button class="x" type="button" id="dClose">${esc(t("close"))}</button><h2>${esc(l.nama)}</h2>` +
+    `<div class="meta">${esc(t("t_" + l.tipe))}, ${esc(t("w_" + l.wilayah))}, ${esc(l.provinsi)}<br>${esc(l.alamat)}${l.catatan ? "<br>" + esc(l.catatan) : ""}</div>` +
+    `<div class="headline"><span class="hx ${h || "ND"}">${h || "–"}</span><div><span class="n num">${fmt(v.ispu)}</span> ${cat ? `<span class="cat ${cat}">${esc(t("k_" + cat))}</span>` : ""}` +
+    `<small>${esc(fLong(sel))}${v.src === "none" ? "" : ", ISPU " + esc(t(srcKey(v.src)))}</small></div></div>` +
+    sceneHTML(v.ispu, h, a) + `<p class="cap">${esc(t("sceneCap"))}</p>` +
+    `<div class="stats">` +
+    stat(t("mean25"), fmt(a.m25, 1) + " µg/m³") + stat(t("mean10"), fmt(a.m10, 1) + " µg/m³") +
+    stat(t("crit"), a.crit ? a.crit.replace(".", lang === "id" ? "," : ".") : "–") + stat(t("aqiEq"), fmt(usAqi(a.m25, a.m10))) +
+    stat(t("bmkg"), bm ? `<span class="cat ${bm}">${esc(t("k_" + bm))}</span>` : "–") +
+    stat(t("peak"), a.peak ? `${fmt(a.peak.ispu)} (${String(a.peak.hour).padStart(2, "0")}.00 ${l.zona})` : "–") +
+    stat(t("rain"), a.rain == null ? "–" : fmt(a.rain, 1) + " mm") +
+    stat(t("wind"), a.wind == null ? "–" : `${fmt(a.wind)} km/j ${esc(t("from"))} ${comp}`.replace("km/j", lang === "id" ? "km/jam" : "km/h")) +
+    `</div>`;
+  if (h) s += `<h3>${esc(t("ctlTitle", { h: h + " " + t("hn_" + h) }))}</h3><p class="hint" style="margin:6px 0 2px;font-weight:600;color:var(--ink)">${esc(t("forWorker"))}</p><ul class="ctl">${T[lang].ctl[h].w.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` +
+    `<p class="hint" style="margin:8px 0 2px;font-weight:600;color:var(--ink)">${esc(t("forLead"))}</p><ul class="ctl">${T[lang].ctl[h].l.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  if (a.hrs) s += `<h3>${esc(t("hourly"))}</h3><p class="hint">${esc(t("hourlyHint", { z: l.zona }))}</p>` + barsSVG(a.hrs, { W, H: 150, label: t("hourly"), labels: i => (i % 6 === 0 || i === 23 ? String(i).padStart(2, "0") : ""), faded: i => a.status === "forecast" || i > a.lastH, selI: -1 });
+  const dv = dates.map(d => val(l, d).ispu);
+  s += `<h3>${esc(t("locTrend"))}</h3>` + barsSVG(dv, { W, H: 160, label: t("locTrend"), labels: i => (i % step === 0 ? fShort(dates[i]) : ""), faded: i => dates[i] > today, selI: dates.indexOf(sel), hit: i => `data-d="${dates[i]}"`, title: i => fMid(dates[i]) + ": " + (dv[i] == null ? t("legNd") : "ISPU " + fmt(dv[i])) });
+  s += `<h3>${esc(t("manTitle"))}</h3><p class="hint">${esc(t("manHint"))}${l.stasiunIspu ? " " + esc(t("station", { s: l.stasiunIspu })) : ""}</p>` +
+    `<div class="manrow"><input class="man${man != null ? " filled" : ""}" id="dMan" type="number" inputmode="numeric" min="0" max="9999" value="${man ?? ""}" placeholder="${esc(t("manPh"))}" aria-label="${esc(t("manTitle"))}">` +
+    `<button class="btn" type="button" id="dSave">${esc(t("save"))}</button>${man != null ? `<button class="btn" type="button" id="dClear">${esc(t("clear"))}</button>` : ""}</div>`;
+  const sh = shared[l.id + "|" + sel];
+  if (sh) s += `<p class="also" style="margin-top:8px">${esc(t("sharedLine", { v: fmt(sh.ispu), s: [sh.stasiun, sh.sumber].filter(Boolean).join(", ") || "ispu-resmi.json" }))}</p>`;
+  if (same.length) s += `<p class="also" style="margin-top:14px">${esc(t("sameSite", { s: same.join(", ") }))}</p>`;
+  s += `<p class="also" style="margin-top:14px">${esc(t("decision"))}</p>`;
+  const dr = $("#drawer"), top = dr.scrollTop; dr.innerHTML = s; dr.scrollTop = top;
+}
+function openDetail(id) {
+  detailId = id; drawDetail(); drawMap();
+  $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false");
+  $("#drawer").scrollTop = 0; $("#drawer").focus({ preventScroll: true });
+}
+function closeDetail() {
+  detailId = null; $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); if (dates.length) drawMap();
+}
+
+/* ---------------- METODE ---------------- */
+function drawMethod() {
+  const ul = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  $("#method").innerHTML =
+    `<div class="panel"><h3>${esc(t("m1t"))}</h3>${ul(T[lang].m1)}</div>` +
+    `<div class="panel"><h3>${esc(t("m2t"))}</h3>${ul(T[lang].m2)}</div>` +
+    `<div class="panel"><h3>${esc(t("m3t"))}</h3><table class="lvltbl"><tr>${T[lang].m3h.map(x => `<th>${esc(x)}</th>`).join("")}</tr>` +
+    T[lang].m3.map(r => `<tr><td><span class="hx ${r[0]}">${r[0]}</span> ${esc(t("hn_" + r[0]))}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join("") + `</table></div>` +
+    `<div class="panel"><h3>${esc(t("m4t"))}</h3>${ul(T[lang].m4)}</div>`;
+}
+
+/* ---------------- CSV (titik koma, desimal koma, sesuai Excel kantor) ---------------- */
+function csv(all) {
+  const num = (v, d = 0) => (v == null || isNaN(v) ? "" : Number(v).toFixed(d).replace(".", ","));
+  const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
+  const head = ["tanggal", "id", "lokasi", "tipe", "wilayah", "provinsi", "level", "ISPU", "sumber_ISPU", "kategori_ISPU", "PM2,5_ug_m3", "PM10_ug_m3", "parameter_kritis", "US_AQI_setara", "kategori_BMKG", "ISPU_jam_tertinggi", "jam_tertinggi", "hujan_mm", "angin_km_jam", "arah_angin_derajat", "status_data"];
+  const out = [head.map(q).join(";")];
+  for (const d of all ? dates : [sel]) for (const l of LOK) {
+    const v = val(l, d), a = v.a || {};
+    out.push([d, l.id, q(l.nama), q(T.id["t_" + l.tipe]), q(T.id["w_" + l.wilayah]), q(l.provinsi), v.h || "", num(v.ispu), v.src === "resmi" ? "resmi (manual)" : v.src === "berkas" ? "resmi (berkas bersama)" : v.src === "none" ? "" : "setara (model)",
+      q(v.ispu == null ? "" : T.id["k_" + catOf(v.ispu)]), num(a.m25, 1), num(a.m10, 1), q(a.crit ? a.crit.replace(".", ",") : ""), num(usAqi(a.m25, a.m10)), q(a.m25 == null ? "" : T.id["k_" + bmkgOf(a.m25)]),
+      num(a.peak && a.peak.ispu), a.peak ? String(a.peak.hour).padStart(2, "0") + ".00 " + l.zona : "", num(a.rain, 1), num(a.wind, 1), num(a.wdir), a.status ? { final: "24 jam", partial: "sementara", forecast: "prakiraan" }[a.status] : ""].join(";"));
+  }
+  const blob = new Blob(["\ufeff" + out.join("\r\n")], { type: "text/csv;charset=utf-8" }), u = URL.createObjectURL(blob), el = document.createElement("a");
+  el.href = u; el.download = all ? `pantau-udara_${dates[0]}_sd_${dates[dates.length - 1]}.csv` : `pantau-udara_${sel}.csv`;
+  document.body.appendChild(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000);
+}
+
+/* ---------------- BERKAS BERSAMA ISPU RESMI ---------------- */
+function exportShared() {
+  const m = new Map();
+  for (const [k, r] of Object.entries(shared)) m.set(k, { tanggal: r.tanggal, id: r.id, ispu: r.ispu, stasiun: r.stasiun || "", sumber: r.sumber || "" });
+  for (const [k, v] of Object.entries(manual)) {
+    const [id, tanggal] = k.split("|"), l = LOK.find(x => x.id === id), old = m.get(k);
+    m.set(k, { tanggal, id, ispu: v, stasiun: (old && old.stasiun) || (l && l.stasiunIspu) || "", sumber: (old && old.ispu === v && old.sumber) || "ISPUnet KLH / DLH, diisi PIC" });
+  }
+  const data = [...m.values()].sort((a, b) => a.tanggal.localeCompare(b.tanggal) || a.id.localeCompare(b.id));
+  const doc = { note: "Angka ISPU resmi per lokasi per tanggal. Berkas ini dibaca semua perangkat. Unggah ke akar repositori untuk memperbarui. id mengikuti locations.json.", diperbarui: nowIn(CFG.TZ.WIB).date, data };
+  const u = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 1)], { type: "application/json" })), el = document.createElement("a");
+  el.href = u; el.download = "ispu-resmi.json"; document.body.appendChild(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000);
+}
+
+/* ---------------- PERISTIWA ---------------- */
+function wire() {
+  $("#btnPull").onclick = pull;
+  $("#dPrev").onclick = () => setDate(dates[dates.indexOf(sel) - 1]);
+  $("#dNext").onclick = () => setDate(dates[dates.indexOf(sel) + 1]);
+  $("#dToday").onclick = () => setDate(dates.includes(today) ? today : dates[dates.length - 1]);
+  $("#dPick").onchange = e => { const d = e.target.value; if (dates.includes(d)) setDate(d); else e.target.value = sel; };
+  $("#langBox").onclick = e => { const b = e.target.closest("[data-lang]"); if (!b) return; lang = b.dataset.lang; LS.set("pu2.lang", lang); applyLang(); renderAll(); };
+  $("#status").addEventListener("change", e => { if (e.target.id === "winSel") { win = +e.target.value; LS.set("pu2.win", win); if (navigator.onLine) pull(); } });
+  $("#viewBtns").onclick = e => {
+    const b = e.target.closest("[data-v]");
+    if (b) { view = b.dataset.v; smoke.parts = []; drawMap(); return; }
+    if (e.target.id === "btnPlay") { playing = !playing; LS.set("pu2.play", playing); drawStatus(); smoke.kick(); }
+  };
+  const pickId = e => { const g = e.target.closest("[data-id]"); return g ? g.dataset.id : null; };
+  $("#mapPts").onclick = e => { const id = pickId(e); if (id) openDetail(id); };
+  $("#mapPts").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { const id = pickId(e); if (id) { e.preventDefault(); openDetail(id); } } };
+  $("#rank").onclick = e => { const id = pickId(e); if (id) openDetail(id); };
+  $("#tiles").onclick = e => { const b = e.target.closest("[data-h]"); if (!b) return; filt.lvl = filt.lvl === b.dataset.h ? "all" : b.dataset.h; $("#fLvl").value = filt.lvl; drawTiles(); drawTable(); $("#lokasi").scrollIntoView(); };
+  const onDate = e => { const r = e.target.closest("[data-d]"); if (r) setDate(r.dataset.d); };
+  $("#scrub").onclick = onDate; $("#lines").onclick = onDate;
+  $("#heat").onclick = e => { const c = e.target.closest("[data-id]"); if (!c) return; if (c.dataset.d) sel = c.dataset.d; detailId = c.dataset.id; renderAll(); openDetail(c.dataset.id); };
+  $("#fQ").oninput = e => { filt.q = e.target.value; drawTable(); };
+  $("#fWil").onchange = e => { filt.wil = e.target.value; drawTable(); };
+  $("#fTipe").onchange = e => { filt.tipe = e.target.value; drawTable(); };
+  $("#fLvl").onchange = e => { filt.lvl = e.target.value; drawTiles(); drawTable(); };
+  $("#fSort").onchange = e => { filt.sort = e.target.value; drawTable(); };
+  $("#csvDay").onclick = () => csv(false); $("#csvAll").onclick = () => csv(true); $("#expJson").onclick = exportShared;
+  $("#tbl").addEventListener("click", e => { if (e.target.closest("input")) return; const id = pickId(e); if (id) openDetail(id); });
+  $("#tbl").addEventListener("change", e => { const m = e.target.dataset.man; if (m) setManual(m, sel, e.target.value); });
+  $("#drawer").addEventListener("click", e => {
+    if (e.target.id === "dClose") closeDetail();
+    else if (e.target.id === "dSave") setManual(detailId, sel, $("#dMan").value);
+    else if (e.target.id === "dClear") setManual(detailId, sel, "");
+    else { const r = e.target.closest("[data-d]"); if (r) setDate(r.dataset.d); }
+  });
+  $("#drawer").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "dMan") setManual(detailId, sel, e.target.value); });
+  $("#scrim").onclick = closeDetail;
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && detailId) closeDetail(); });
+  addEventListener("online", () => { drawStatus(); if (!db || Date.now() - db.at > CFG.STALE_MIN * 6e4) pull(); });
+  addEventListener("offline", drawStatus);
+  let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (dates.length) { drawStatus(); drawMap(); drawScrub(); drawLines(); if (detailId) drawDetail(); } }, 150); });
+}
+
+/* ---------------- MULAI ---------------- */
+async function init() {
+  smoke.init(); wire(); applyLang();
+  try {
+    const j = await (await fetch("locations.json")).json();
+    LOK = (j.lokasi || []).map(l => ({ ...l, key: l.lat + "," + l.lon, tz: CFG.TZ[l.zona] || CFG.TZ.WIB }));
+  } catch (e) { lastErr = "locations.json: " + e.message; }
+  try {
+    const r = await fetch("ispu-resmi.json", { cache: "no-cache" });
+    if (r.ok) for (const x of ((await r.json()).data || [])) if (x && x.id && x.tanggal && x.ispu != null && !isNaN(+x.ispu)) shared[x.id + "|" + x.tanggal] = { ...x, ispu: Math.round(+x.ispu) };
+  } catch (e) { /* berkas bersama bersifat opsional */ }
+  const m = new Map(); LOK.forEach(l => { if (!m.has(l.key)) m.set(l.key, { key: l.key, lat: l.lat, lon: l.lon, tz: l.tz }); });
+  PTS = [...m.values()];
+  const saved = LS.get("pu2.db", null);
+  if (saved && saved.v === 2 && saved.pts) db = saved;
+  compute(); renderAll();
+  if (LOK.length && navigator.onLine && (!db || db.win !== win || Date.now() - db.at > CFG.STALE_MIN * 6e4)) pull();
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+init();
+
 </script>
 </body>
 </html>

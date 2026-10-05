@@ -1,0 +1,27 @@
+{
+ "note": "Angka ISPU resmi per lokasi per tanggal. Berkas ini dibaca semua perangkat. Unggah ke akar repositori untuk memperbarui. id mengikuti locations.json.",
+ "diperbarui": "2026-10-05",
+ "data": [
+  {
+   "tanggal": "2026-09-22",
+   "id": "palembang",
+   "ispu": 134,
+   "stasiun": "Palembang (KLH)",
+   "sumber": "ISPUnet KLH, dikutip pada laporan QSHE 22 Sep 2026"
+  },
+  {
+   "tanggal": "2026-09-29",
+   "id": "pontianak",
+   "ispu": 957,
+   "stasiun": "Pontianak (KLH)",
+   "sumber": "Rilis ISPU KLH, dikutip pada update QSHE 5 Okt 2026"
+  },
+  {
+   "tanggal": "2026-10-04",
+   "id": "palembang",
+   "ispu": 780,
+   "stasiun": "Palembang (KLH)",
+   "sumber": "ISPUnet KLH, dikutip pada update QSHE 5 Okt 2026"
+  }
+ ]
+}
