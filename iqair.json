@@ -1,1 +1,1 @@
-{"note":"Diisi otomatis oleh GitHub Actions (scripts/tarik-iqair.mjs). Jangan disunting manual.","sumber":"IQAir AirVisual API (paket Community, tingkat kota)","titik":{},"data":{},"galat":"Belum ada tarikan. Isi secret IQAIR_KEY lalu jalankan workflow Tarik data IQAir."}
+{"data":{},"titik":{},"note":"Diisi otomatis oleh GitHub Actions (scripts/tarik-iqair.mjs). Jangan disunting manual.","sumber":"IQAir AirVisual API (paket Community, tingkat kota)","galat":"Secret IQAIR_KEY belum diisi di Settings > Secrets and variables > Actions.","diperiksa":"2026-10-15T08:16:56.420Z"}
