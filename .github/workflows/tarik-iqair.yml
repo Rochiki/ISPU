@@ -1,0 +1,40 @@
+# Pantau Udara Hexindo - tarikan otomatis data sensor IQAir
+# Jadwal 6 kali sehari: 05.53, 08.53, 11.53, 14.53, 17.53, 20.53 WIB.
+# Kebutuhan sekitar 52 panggilan per tarikan masih di bawah batas paket gratis IQAir
+# (500 per hari, 10.000 per bulan). Jangan menambah jadwal tanpa menghitung ulang kuota.
+name: Tarik data IQAir
+
+on:
+  schedule:
+    - cron: "53 22,1,4,7,10,13 * * *"   # jam UTC = WIB - 7
+  workflow_dispatch:                      # tombol "Run workflow" untuk tarikan manual
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tarik-iqair
+  cancel-in-progress: false
+
+jobs:
+  tarik:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Tarik data IQAir
+        env:
+          IQAIR_KEY: ${{ secrets.IQAIR_KEY }}
+        run: node scripts/tarik-iqair.mjs
+      - name: Simpan iqair.json ke repositori
+        if: always()
+        run: |
+          git config user.name "pantau-udara-bot"
+          git config user.email "pantau-udara-bot@users.noreply.github.com"
+          git add iqair.json
+          git diff --cached --quiet || git commit -m "Data IQAir $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull --rebase --quiet || true
+          git push

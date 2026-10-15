@@ -1,4 +1,4 @@
-# Pantau Udara Hexindo (v2)
+# Pantau Udara Hexindo (v3)
 
 Aplikasi web pemantauan kualitas udara harian untuk **58 lokasi operasional PT Hexindo Adiperkasa Tbk**
 (kantor cabang, kantor perwakilan, proyek pertambangan, dan fasilitas lainnya di seluruh Indonesia).
@@ -6,6 +6,31 @@ Berjalan **luring** setelah sekali dibuka dan **menarik data terbaru secara dari
 
 Disusun QSHE Department. Angka dan saran di dalamnya adalah bahan rekomendasi QSHE; keputusan
 penerapan di tiap lokasi berada pada manajemen.
+
+## Yang baru di v3
+
+- **Pilihan sumber angka**: tombol *Model CAMS* atau *Sensor IQAir* di bawah judul halaman.
+- Data sensor IQAir ditarik otomatis **6 kali sehari** oleh GitHub Actions; kunci API disimpan sebagai secret, tidak tampil di situs.
+- US AQI dari IQAir diubah ke **ISPU setara**, sehingga sebanding dengan angka model dan angka resmi.
+- **Catatan titik ukur** di setiap lokasi (daftar lokasi dan panel rincian): stasiun resmi, kota IQAir beserta jaraknya, dan pusat grid model beserta jaraknya.
+- Panel rincian memuat **tabel perbandingan tiga sumber** pada tanggal terpilih.
+- CSV mendapat kolom tambahan untuk ketiga sumber dan titik ukurnya.
+
+## Memasang sumber sensor IQAir (sekali saja)
+
+1. Daftar akun gratis di dashboard IQAir (https://dashboard.iqair.com), buat API key paket **Community**.
+2. Di repositori GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
+   Nama: `IQAIR_KEY`, isi: API key tadi.
+3. **Settings → Actions → General → Workflow permissions**: pilih *Read and write permissions*, simpan.
+4. Tab **Actions → Tarik data IQAir → Run workflow**. Tarikan pertama butuh sekitar 12 menit
+   (paket gratis 5 panggilan per menit). Setelah selesai, `iqair.json` terisi dan aplikasi menampilkan angka sensor.
+
+Batas paket gratis: 500 panggilan per hari, 10.000 per bulan. Jadwal 6 kali sehari memakai sekitar
+9.700 panggilan per bulan (52 titik). Jangan menambah jadwal atau sering menekan *Run workflow*
+tanpa menghitung ulang kuota. Kunci API IQAir dapat kedaluwarsa; bila aplikasi menampilkan
+"Kunci IQAir bermasalah", buat kunci baru dan ganti secret `IQAIR_KEY`.
+
+Kota IQAir yang berjarak lebih dari 50 km dari lokasi tidak dipakai untuk level (ubah di `CFG.SENSOR_MAX_KM`).
 
 ## Yang baru di v2
 
@@ -26,15 +51,21 @@ penerapan di tiap lokasi berada pada manajemen.
    index.html
    locations.json
    ispu-resmi.json
+   iqair.json
    manifest.json
    icon.svg
    sw.js
    README.md
+   scripts/tarik-iqair.mjs
+   .github/workflows/tarik-iqair.yml
    ```
+
+   Dua berkas terakhir berada di dalam folder. Di komputer, seret seluruh folder ke halaman upload
+   agar struktur foldernya ikut.
 
 3. Pilih **Commit changes**. GitHub Pages memperbarui situs dalam satu sampai dua menit.
 4. Di perangkat yang sudah pernah membuka versi lama: buka aplikasi saat daring, lalu muat ulang
-   sekali lagi. Service worker versi baru (`pantau-udara-v2-1`) akan menggantikan simpanan lama.
+   sekali lagi. Service worker versi baru (`pantau-udara-v3-0`) akan menggantikan simpanan lama.
 
 Tidak ada proses build, dependensi, atau kunci API.
 
@@ -56,6 +87,7 @@ Sesuaikan di sana bila matriks level Hexindo berbeda.
 |---|---|---|
 | ISPU resmi | Stasiun KLH atau DLH, **diisi manual** per lokasi per tanggal | Berkekuatan regulasi, selalu didahulukan |
 | ISPU setara | Model CAMS lewat Open-Meteo Air Quality API, PM2,5 dan PM10 per jam, **otomatis** | Peringatan dini dan lokasi tanpa stasiun |
+| ISPU setara (sensor) | Sensor darat yang dihimpun IQAir, tingkat kota, US AQI dikonversi ke ISPU, **otomatis 6 kali sehari** | Terukur di darat tetapi tidak resmi; dipilih lewat tombol sumber |
 | Hujan dan angin | Open-Meteo Forecast API, harian | Pelengkap; arah angin menggerakkan animasi |
 
 Konsentrasi per jam dirata-ratakan per hari menurut waktu setempat (WIB, WITA, WIT), lalu diubah
@@ -121,5 +153,5 @@ Pemisah kolom titik koma dan desimal koma, sehingga langsung terbuka benar di Ex
 
 ## Sumber
 
-Data model: Open-Meteo (CC BY 4.0) dan Copernicus Atmosphere Monitoring Service.
+Data model: Open-Meteo (CC BY 4.0) dan Copernicus Atmosphere Monitoring Service. Data sensor: IQAir.
 Garis pantai: Natural Earth (domain publik).

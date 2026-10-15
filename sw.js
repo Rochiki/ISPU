@@ -1,10 +1,10 @@
-/* Pantau Udara Hexindo - service worker (v2)
+/* Pantau Udara Hexindo - service worker (v3)
    Cangkang aplikasi disimpan agar tetap bisa dibuka saat luring.
    Data kualitas udara TIDAK disimpan di sini; tarikan terakhir disimpan halaman di localStorage,
    sehingga angka yang tampil saat luring selalu yang terakhir berhasil ditarik.
    Naikkan angka versi CACHE setiap kali berkas aplikasi diperbarui. */
-const CACHE = "pantau-udara-v2-1";
-const SHELL = ["./", "./index.html", "./locations.json", "./manifest.json", "./icon.svg", "./ispu-resmi.json"];
+const CACHE = "pantau-udara-v3-0";
+const SHELL = ["./", "./index.html", "./locations.json", "./manifest.json", "./icon.svg", "./ispu-resmi.json", "./iqair.json"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

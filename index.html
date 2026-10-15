@@ -117,6 +117,22 @@ section{margin-bottom:44px}
 .cat.baik{background:var(--baik)} .cat.sedang{background:var(--sedang)} .cat.tidak{background:var(--tidak);color:var(--ink)} .cat.sangat{background:var(--sangat)} .cat.bahaya{background:var(--bahaya)}
 .src{font-size:12px;color:var(--mute);white-space:nowrap}
 .src.resmi,.src.berkas{color:#0a6b3c;font-weight:700}
+.src.sensor{color:#6a3fb5;font-weight:700}
+.tu{display:block;font-size:12px;color:var(--mute);line-height:1.35;margin-top:2px}
+.srcsw{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 6px}
+.srcsw .lb{font-size:13.5px;font-weight:600}
+.srcnote{font-size:13px;color:var(--mute);margin:0 0 12px}
+.srcnote .err{color:#b3261e;font-weight:600}
+.cmp{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}
+.cmp th,.cmp td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;vertical-align:top}
+.cmp th{font-size:12px;color:var(--mute);font-weight:600}
+.cmp td.r,.cmp th.r{text-align:right}
+.cmp tr.on td{background:#f3eefb}
+.titik{margin:6px 0 0;padding-left:18px;font-size:13.5px}
+.titik li{margin-bottom:8px}
+.titik b{display:block}
+.titik small{color:var(--mute);display:block}
+.titik .warn{color:#b3261e;font-weight:600}
 
 /* ---------- grafik ---------- */
 .chart{width:100%;display:block;overflow:visible}
@@ -259,6 +275,7 @@ body.still .mk .pulse, body.still .scene .haze{animation-play-state:paused}
 <main>
   <section id="peta">
     <div class="lead"><h1 id="h1"></h1><span class="badge" id="dayBadge"></span></div>
+    <div class="srcsw" id="srcSw" role="group"></div><p class="srcnote" id="srcNote"></p>
     <div id="emptyBox" class="panel empty" hidden></div>
     <div class="hero" id="heroBox">
       <div>
@@ -356,6 +373,9 @@ const CFG = {
   // Batas atas ISPU tiap level. Ubah di sini bila matriks level Hexindo berbeda.
   LEVELS: [["H1", 100], ["H2", 200], ["H3", 300], ["H4", Infinity]],
   TZ: { WIB: "Asia/Jakarta", WITA: "Asia/Makassar", WIT: "Asia/Jayapura" },
+  SENSOR_FILE: "iqair.json",   // diisi otomatis oleh GitHub Actions (scripts/tarik-iqair.mjs)
+  SENSOR_MAX_KM: 50,           // kota IQAir lebih jauh dari ini dianggap tidak mewakili lokasi
+  MODEL_GRID_KM: 45,           // CAMS global 0,4 derajat
 };
 const HCOL = { H1: "#0070c0", H2: "#ffd400", H3: "#c00000", H4: "#000000", ND: "#d7dde0" };
 const WILS = ["barat", "timur", "tambang", "fasilitas"];
@@ -414,12 +434,34 @@ const T = {
     hourly: "Per jam pada tanggal ini", hourlyHint: "ISPU setara dari konsentrasi tiap jam, waktu setempat ({z}). Jam yang belum terjadi ditampilkan pudar.",
     locTrend: "Riwayat lokasi ini", ctlTitle: "Pengendalian yang disarankan pada {h}", forWorker: "Pekerja lapangan", forLead: "Safety manager dan pimpinan lokasi",
     manTitle: "Angka ISPU resmi untuk tanggal ini", manHint: "Isi dari ISPUnet KLH atau DLH setempat bila ada stasiun. Angka resmi menggantikan angka model pada tanggal ini dan tersimpan di perangkat ini sampai dibagikan lewat berkas ispu-resmi.json.",
-    station: "Stasiun rujukan: {s}", save: "Simpan", clear: "Hapus angka resmi", sameSite: "Lokasi lain pada titik pantau yang sama: {s}",
+    station: "Stasiun rujukan: {s}",
+    srcSensor: "setara, sensor IQAir", srcFb: "(sensor tidak tersedia)",
+    srcPick: "Sumber angka:", sw_model: "Model CAMS", sw_sensor: "Sensor IQAir",
+    swNoteModel: "Angka otomatis dari model sebaran CAMS (Open-Meteo), resolusi sekitar 45 km; bukan hasil alat ukur. Angka ISPU resmi yang diisi tetap didahulukan.",
+    swNoteSensor: "Angka otomatis dari sensor di darat yang dihimpun IQAir (tingkat kota), US AQI diubah ke ISPU setara. Tarikan terakhir {t}. Sensor dipakai pada {n} dari {N} lokasi; lokasi tanpa kota IQAir dalam radius {km} km memakai model.",
+    swNoSens: "Data sensor IQAir belum tersedia. Angka yang tampil berasal dari model.", swErr: "Catatan tarikan: {m}",
+    tuResmi: "Titik ukur: stasiun {s}", tuResmiNa: "belum ditetapkan", tiResmiNa: "Belum ada stasiun KLH/DLH yang ditetapkan untuk lokasi ini",
+    tuSensor: "Titik ukur: sensor IQAir kota {k}, ±{d} km", tuModel: "Titik ukur: sel grid model ±{g} km, bukan alat ukur", tuModelD: "(pusat grid {d} km dari lokasi)", tuNoSensor: "; sensor tidak tersedia",
+    cmpTitle: "Perbandingan sumber pada tanggal ini", cmpHint: "Baris berwarna adalah sumber yang dipakai untuk level. Selisih antarbaris wajar karena alat, titik, dan rentang waktunya berbeda.",
+    cmpSrc: "Sumber", cmpNote: "Keterangan", cmpResmi: "ISPU resmi (KLH/DLH)", cmpResmiNone: "Belum diisi",
+    cmpSensNone: "Lokasi belum dipetakan ke kota IQAir.", cmpSensNoDay: "Belum ada bacaan kota {k} pada tanggal ini.",
+    cmpSensRead: "Rata-rata dari {n} bacaan. Bacaan terakhir {j}: US AQI {q}, polutan utama {p}.", cmpSensFar: "Kota berjarak {d} km (di atas {km} km), tidak dipakai untuk level.",
+    cmpSensNoPm: "Polutan utama bukan partikulat, sehingga ISPU setara PM tidak dapat dihitung.",
+    readList: "Bacaan sensor:",
+    tiTitle: "Titik pengukuran (lokasi sampling)", tiHint: "Angka pada aplikasi tidak diukur di lokasi kerja Hexindo. Berikut asal angka setiap sumber dan jaraknya dari lokasi.",
+    tiLok: "Lokasi Hexindo", tiLokNote: "Koordinat perkiraan dari alamat pada daftar induk.",
+    tiResmiNote: "Diisi PIC dari ISPUnet KLH atau DLH setempat.",
+    tiSensNone: "Belum dipetakan. Pemetaan otomatis berjalan pada tarikan IQAir berikutnya.",
+    tiSens: "Titik rujukan kota pada {c}, ±{d} km dari lokasi. Angka kota adalah gabungan stasiun di kota tersebut yang dihitung IQAir (BMKG, universitas, komunitas); paket gratis tidak menyebut nama stasiun.",
+    tiSensFar: "Terlalu jauh dari lokasi (di atas {km} km); tidak dipakai untuk level.", tiSensLink: "Lihat daftar stasiun kota ini di IQAir",
+    tiModel: "Sel grid CAMS global ±{g} km. Pusat grid yang dipakai {c}, {d} km dari lokasi. Bukan alat ukur; angka mewakili rata-rata satu sel.",
+    tiModelNa: "Sel grid CAMS global ±{g} km. Pilih Tarik data terbaru untuk menampilkan pusat grid yang dipakai.", save: "Simpan", clear: "Hapus angka resmi", sameSite: "Lokasi lain pada titik pantau yang sama: {s}",
     decision: "Angka dan saran pada aplikasi ini adalah bahan rekomendasi QSHE. Keputusan penerapan di tiap lokasi berada pada manajemen.",
     methodTitle: "Metode dan batasan",
     hn_H1: "Pantau", hn_H2: "Batasi", hn_H3: "Kurangi", hn_H4: "Lindungi",
     m1t: "Sumber angka", m1: ["Lapis pertama adalah ISPU resmi dari stasiun KLH atau DLH, diisi manual per lokasi per tanggal. Angka ini berkekuatan regulasi dan selalu didahulukan.",
-      "Lapis kedua adalah model sebaran CAMS yang ditarik otomatis lewat Open-Meteo: PM2,5 dan PM10 per jam, 90 hari ke belakang sampai 3 hari ke depan.",
+      "Lapis kedua dapat dipilih pada tombol Sumber angka: (a) model sebaran CAMS lewat Open-Meteo, PM2,5 dan PM10 per jam, 90 hari ke belakang sampai 3 hari ke depan; atau (b) sensor di darat yang dihimpun IQAir, tingkat kota, ditarik otomatis 6 kali sehari oleh GitHub Actions.",
+      "Angka IQAir berupa US AQI. Aplikasi mengubahnya kembali ke konsentrasi PM2,5 atau PM10 dengan tabel US EPA 2024, lalu ke ISPU setara, sehingga sebanding dengan angka lain. Rata-rata harian sensor dihitung dari bacaan yang tersedia pada hari itu.",
       "Curah hujan dan angin harian ditarik dari model cuaca Open-Meteo. Arah angin dipakai untuk menggerakkan animasi asap pada peta."],
     m2t: "Cara menghitung", m2: ["Konsentrasi per jam dirata-ratakan per hari menurut waktu setempat, lalu diubah menjadi ISPU setara dengan tabel batas PermenLHK No. 14 Tahun 2020. Parameter kritis adalah yang tertinggi antara PM2,5 dan PM10.",
       "Untuk hari berjalan, rata-rata dihitung dari pukul 00.00 sampai jam terakhir dan ditandai sementara.",
@@ -430,8 +472,10 @@ const T = {
     m4t: "Batasan yang perlu disampaikan", m4: ["Angka model bukan hasil alat ukur di lokasi dan tidak berkekuatan regulasi. Resolusi model sekitar 40 km, sehingga lokasi yang berdekatan mendapat angka yang sama.",
       "Pada kebakaran lahan di dekat lokasi, model cenderung lebih rendah daripada angka stasiun. Bila ada stasiun ISPU, isi angka resminya.",
       "Koordinat lokasi adalah perkiraan dari alamat pada daftar induk dan dapat diperbaiki di berkas locations.json.",
+      "Sensor IQAir terdiri atas stasiun BMKG dan sensor berbiaya rendah milik universitas atau komunitas. Angka ini terukur di darat tetapi bukan angka resmi dan tidak berkekuatan regulasi. Paket gratis hanya memberi angka kota, tidak per stasiun; kota yang berjarak lebih dari 50 km dari lokasi tidak dipakai.",
+      "US AQI selalu lebih tinggi daripada ISPU untuk konsentrasi yang sama. Contoh: PM2,5 255 µg/m³ setara US AQI 361 dan ISPU sekitar 304. Bandingkan angka pada skala yang sama.",
       "Angka resmi yang diisi manual tersimpan di perangkat pengisi. Agar tampil di semua perangkat, pilih Unduh ispu-resmi.json pada daftar lokasi, lalu unggah berkas itu ke repositori GitHub."],
-    foot: "Disusun QSHE Department, PT Hexindo Adiperkasa Tbk. Data model: Open-Meteo dan Copernicus Atmosphere Monitoring Service. Garis pantai: Natural Earth.",
+    foot: "Disusun QSHE Department, PT Hexindo Adiperkasa Tbk. Data model: Open-Meteo dan Copernicus Atmosphere Monitoring Service. Data sensor: IQAir. Garis pantai: Natural Earth.",
     compass: ["U", "TL", "T", "TG", "S", "BD", "B", "BL"],
     ctl: {
       H1: { w: ["Kegiatan berjalan seperti biasa.", "Pekerja dengan asma atau penyakit jantung dan paru membawa obat pelega dan melapor bila bergejala.", "Masker tersedia di pos kerja untuk pekerjaan luar ruang lebih dari 4 jam."],
@@ -482,12 +526,34 @@ const T = {
     hourly: "Hour by hour on this date", hourlyHint: "ISPU equivalent from each hour's concentration, local time ({z}). Hours that have not happened yet are faded.",
     locTrend: "History of this location", ctlTitle: "Suggested controls at {h}", forWorker: "Field workers", forLead: "Safety manager and site lead",
     manTitle: "Official ISPU figure for this date", manHint: "Enter it from the ministry's ISPUnet or the local environment agency where a station exists. The official figure replaces the model figure for this date and stays on this device until shared through the ispu-resmi.json file.",
-    station: "Reference station: {s}", save: "Save", clear: "Remove official figure", sameSite: "Other locations at the same monitoring point: {s}",
+    station: "Reference station: {s}",
+    srcSensor: "equivalent, IQAir sensor", srcFb: "(no sensor available)",
+    srcPick: "Figures from:", sw_model: "CAMS model", sw_sensor: "IQAir sensor",
+    swNoteModel: "Automatic figures from the CAMS dispersion model (Open-Meteo), about 45 km resolution; not instrument readings. Entered official ISPU figures still take priority.",
+    swNoteSensor: "Automatic figures from ground sensors aggregated by IQAir (city level), US AQI converted to an ISPU equivalent. Last pull {t}. Sensors are used at {n} of {N} locations; locations without an IQAir city within {km} km use the model.",
+    swNoSens: "IQAir sensor data is not available yet. Figures shown come from the model.", swErr: "Pull note: {m}",
+    tuResmi: "Measured at: station {s}", tuResmiNa: "not assigned", tiResmiNa: "No ministry or provincial station assigned to this location",
+    tuSensor: "Measured at: IQAir sensors, {k}, ±{d} km", tuModel: "Measured at: model grid cell ±{g} km, not an instrument", tuModelD: "(grid centre {d} km away)", tuNoSensor: "; no sensor available",
+    cmpTitle: "Sources compared on this date", cmpHint: "The shaded row is the source used for the level. Differences between rows are expected: instruments, points and time spans differ.",
+    cmpSrc: "Source", cmpNote: "Note", cmpResmi: "Official ISPU (ministry/province)", cmpResmiNone: "Not entered",
+    cmpSensNone: "Location not yet mapped to an IQAir city.", cmpSensNoDay: "No readings for {k} on this date yet.",
+    cmpSensRead: "Average of {n} readings. Latest at {j}: US AQI {q}, main pollutant {p}.", cmpSensFar: "City is {d} km away (over {km} km), not used for the level.",
+    cmpSensNoPm: "The main pollutant is not particulate, so a PM-based ISPU cannot be derived.",
+    readList: "Sensor readings:",
+    tiTitle: "Where figures are measured (sampling point)", tiHint: "No figure in this app is measured at the Hexindo work site itself. Below is where each source comes from and how far it is from the site.",
+    tiLok: "Hexindo location", tiLokNote: "Coordinates estimated from the master-list address.",
+    tiResmiNote: "Entered by the PIC from ISPUnet or the provincial agency.",
+    tiSensNone: "Not mapped yet. Mapping runs automatically on the next IQAir pull.",
+    tiSens: "City reference point at {c}, ±{d} km from the site. The city figure combines the stations in that city as calculated by IQAir (BMKG, universities, community); the free plan does not name the stations.",
+    tiSensFar: "Too far from the site (over {km} km); not used for the level.", tiSensLink: "See this city's stations on IQAir",
+    tiModel: "CAMS global grid cell ±{g} km. Grid centre used {c}, {d} km from the site. Not an instrument; the figure is a cell average.",
+    tiModelNa: "CAMS global grid cell ±{g} km. Choose Pull latest data to show the grid centre used.", save: "Save", clear: "Remove official figure", sameSite: "Other locations at the same monitoring point: {s}",
     decision: "Figures and suggestions in this app are QSHE recommendation material. Decisions on implementation at each location rest with management.",
     methodTitle: "Method and limits",
     hn_H1: "Monitor", hn_H2: "Limit", hn_H3: "Reduce", hn_H4: "Protect",
     m1t: "Where the figures come from", m1: ["The first layer is the official ISPU from ministry or provincial stations, entered manually per location per date. It carries regulatory weight and always takes priority.",
-      "The second layer is the CAMS dispersion model pulled automatically through Open-Meteo: hourly PM2.5 and PM10, up to 90 days back and 3 days ahead.",
+      "The second layer is chosen with the Figures from buttons: (a) the CAMS dispersion model through Open-Meteo, hourly PM2.5 and PM10, up to 90 days back and 3 days ahead; or (b) ground sensors aggregated by IQAir at city level, pulled automatically 6 times a day by GitHub Actions.",
+      "IQAir reports US AQI. The app converts it back to a PM2.5 or PM10 concentration with the 2024 US EPA table, then to an ISPU equivalent, so the figures are comparable. The daily sensor average uses the readings available that day.",
       "Daily rainfall and wind come from the Open-Meteo weather model. Wind direction drives the smoke animation on the map."],
     m2t: "How figures are calculated", m2: ["Hourly concentrations are averaged per day in local time, then converted to an ISPU equivalent with the breakpoints in Ministerial Regulation No. 14 of 2020. The critical parameter is the higher of PM2.5 and PM10.",
       "For the day in progress, the average runs from 00:00 to the latest hour and is marked provisional.",
@@ -498,8 +564,10 @@ const T = {
     m4t: "Limits to tell readers about", m4: ["Model figures are not on-site instrument readings and carry no regulatory weight. Model resolution is about 40 km, so nearby locations receive the same figure.",
       "Close to land fires the model tends to read lower than station figures. Where an ISPU station exists, enter its official figure.",
       "Location coordinates are estimated from the addresses in the master list and can be corrected in locations.json.",
+      "IQAir sensors are a mix of BMKG stations and low-cost sensors run by universities or communities. They are ground measurements but not official figures and carry no regulatory weight. The free plan gives city figures only, not per station; cities more than 50 km from a site are not used.",
+      "US AQI is always higher than ISPU for the same concentration. Example: PM2.5 of 255 µg/m³ is US AQI 361 and ISPU about 304. Compare figures on the same scale.",
       "Manually entered official figures stay on the device that entered them. To show them on every device, choose Download ispu-resmi.json in the location list, then upload that file to the GitHub repository."],
-    foot: "Prepared by the QSHE Department, PT Hexindo Adiperkasa Tbk. Model data: Open-Meteo and the Copernicus Atmosphere Monitoring Service. Coastlines: Natural Earth.",
+    foot: "Prepared by the QSHE Department, PT Hexindo Adiperkasa Tbk. Model data: Open-Meteo and the Copernicus Atmosphere Monitoring Service. Sensor data: IQAir. Coastlines: Natural Earth.",
     compass: ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
     ctl: {
       H1: { w: ["Work proceeds as usual.", "Workers with asthma or heart and lung conditions carry their reliever medication and report any symptoms.", "Masks are available at the work post for outdoor tasks longer than 4 hours."],
@@ -524,6 +592,8 @@ let LOK = [], PTS = [], db = null, agg = {}, dates = [], today = "", sel = "";
 let lang = LS.get("pu2.lang", "id") === "en" ? "en" : "id";
 let win = CFG.WINDOWS.includes(LS.get("pu2.win", 30)) ? LS.get("pu2.win", 30) : 30;
 let manual = LS.get("pu2.manual", {});
+let sens = null, sagg = {};  // data sensor IQAir (iqair.json) dan agregat hariannya
+let srcMode = LS.get("pu2.src", "model") === "sensor" ? "sensor" : "model";
 let shared = {};              // angka resmi dari berkas ispu-resmi.json di repositori (tampil di semua perangkat)
 let view = "nas", detailId = null, busy = false, lastErr = "";
 let playing = LS.get("pu2.play", true) && !matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -565,6 +635,18 @@ function interp(c, tbl) {
   return null;
 }
 const ispu25 = c => interp(c, BP.pm25), ispu10 = c => interp(c, BP.pm10);
+/* Kebalikan tabel: angka indeks -> konsentrasi (dipakai untuk US AQI dari IQAir) */
+function inv(v, tbl) {
+  if (v == null || isNaN(v)) return null;
+  v = Math.max(0, v);
+  for (let i = 1; i < tbl.length; i++) if (v <= tbl[i][1] || i === tbl.length - 1) {
+    const [x0, y0] = tbl[i - 1], [x1, y1] = tbl[i];
+    return x0 + (x1 - x0) * (v - y0) / (y1 - y0);
+  }
+  return null;
+}
+const kmAntara = (a, b, c, d) => { const R = 6371, rd = x => x * Math.PI / 180, h = Math.sin(rd(c - a) / 2) ** 2 + Math.cos(rd(a)) * Math.cos(rd(c)) * Math.sin(rd(d - b) / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+const fmtC = (lat, lon) => `${fmt(lat, 3)} / ${fmt(lon, 3)}`;
 const usAqi = (a, b) => { const v = maxN(interp(a, AQI.pm25), interp(b, AQI.pm10)); return v == null ? null : Math.min(500, v); };
 const hOf = i => (i == null ? null : CFG.LEVELS.find(l => i <= l[1])[0]);
 const catOf = i => (i == null ? null : i <= 50 ? "baik" : i <= 100 ? "sedang" : i <= 200 ? "tidak" : i <= 300 ? "sangat" : "bahaya");
@@ -581,6 +663,7 @@ async function getJSON(url) {
 async function pull() {
   if (busy) return;
   busy = true; lastErr = ""; drawStatus();
+  await loadSensor(true);
   try {
     const groups = {};
     PTS.forEach(p => (groups[p.tz] = groups[p.tz] || []).push(p));
@@ -595,6 +678,7 @@ async function pull() {
         const h = aq[i] && aq[i].hourly;
         if (!h || !h.time || !h.time.length) return;
         const o = { tz, start: h.time[0].slice(0, 10), pm25: (h.pm2_5 || []).map(r1), pm10: (h.pm10 || []).map(r1) };
+        if (aq[i].latitude != null) o.g = [aq[i].latitude, aq[i].longitude];   // titik grid model yang dipakai
         const d = wx && wx[i] && wx[i].daily;
         if (d && d.time && d.time.length) o.w = { start: d.time[0], rain: d.precipitation_sum || [], wind: d.wind_speed_10m_max || [], wdir: d.wind_direction_10m_dominant || [] };
         out[p.key] = o;
@@ -606,7 +690,7 @@ async function pull() {
       const slim = { v: 2, at: db.at, win: 14, pts: {} };
       for (const [k, p] of Object.entries(out)) {
         const keep = (14 + CFG.FORECAST_DAYS) * 24, cut = Math.max(0, p.pm25.length - keep), dcut = cut / 24;
-        slim.pts[k] = { tz: p.tz, start: addDays(p.start, dcut), pm25: p.pm25.slice(cut), pm10: p.pm10.slice(cut) };
+        slim.pts[k] = { tz: p.tz, g: p.g, start: addDays(p.start, dcut), pm25: p.pm25.slice(cut), pm10: p.pm10.slice(cut) };
         if (p.w) slim.pts[k].w = { start: addDays(p.w.start, dcut), rain: p.w.rain.slice(dcut), wind: p.w.wind.slice(dcut), wdir: p.w.wdir.slice(dcut) };
       }
       LS.set("pu2.db", slim);
@@ -617,6 +701,52 @@ async function pull() {
   }
   busy = false;
   renderAll();
+}
+
+/* ---------------- DATA SENSOR IQAIR ---------------- */
+async function loadSensor(net) {
+  if (net) try {
+    const r = await fetch(CFG.SENSOR_FILE, { cache: "no-cache" });
+    if (r.ok) { const j = await r.json(); if (j && j.data) { sens = j; LS.set("pu2.sens", j); } }
+  } catch (e) { /* sensor bersifat pelengkap; pakai simpanan terakhir */ }
+  if (!sens) sens = LS.get("pu2.sens", null);
+  computeSensor();
+}
+/* Info titik IQAir untuk satu lokasi: kota rujukan, jarak, dan apakah layak dipakai */
+function sTitik(key) {
+  const m = sens && sens.titik && sens.titik[key];
+  if (!m) return null;
+  return { ...m, ok: m.jarakKm == null || m.jarakKm <= CFG.SENSOR_MAX_KM };
+}
+function computeSensor() {
+  sagg = {}; Ecache = {}; S = null;
+  if (!sens || !sens.data) return;
+  for (const [date, pts] of Object.entries(sens.data)) for (const [key, rows] of Object.entries(pts)) {
+    let s25 = 0, n25 = 0, s10 = 0, n10 = 0, last = null;
+    const read = [];
+    for (const [jam, aqi, main] of rows) {
+      const c25 = main === "p2" ? inv(aqi, AQI.pm25) : null, c10 = main === "p1" ? inv(aqi, AQI.pm10) : null;
+      if (c25 != null) { s25 += c25; n25++; }
+      if (c10 != null) { s10 += c10; n10++; }
+      const r = { jam, aqi, main, c25, c10, ispu: maxN(ispu25(c25), ispu10(c10)) };
+      read.push(r); last = r;
+    }
+    const m25 = n25 ? s25 / n25 : null, m10 = n10 ? s10 / n10 : null;
+    (sagg[key] = sagg[key] || {})[date] = { n: rows.length, read, last, m25, m10, ispu: maxN(ispu25(m25), ispu10(m10)), aqi: usAqi(m25, m10) };
+  }
+}
+/* Ringkasan titik pengukuran untuk satu lokasi menurut sumber angka yang sedang tampil */
+function titikUkur(l, v) {
+  if (v.src === "resmi" || v.src === "berkas") {
+    const sh = shared[l.id + "|" + sel];
+    return t("tuResmi", { s: (sh && sh.stasiun) || l.stasiunIspu || t("tuResmiNa") });
+  }
+  if (v.src === "sensor") { const m = sTitik(l.key); return t("tuSensor", { k: m.kota, d: m.jarakKm == null ? "?" : fmt(m.jarakKm) }); }
+  if (v.src === "model" || v.src === "fc") {
+    const g = db && db.pts[l.key] && db.pts[l.key].g;
+    return t("tuModel", { g: fmt(CFG.MODEL_GRID_KM) }) + (g ? " " + t("tuModelD", { d: fmt(kmAntara(l.lat, l.lon, g[0], g[1])) }) : "") + (v.fb ? t("tuNoSensor") : "");
+  }
+  return "";
 }
 
 /* ---------------- AGREGASI HARIAN ---------------- */
@@ -657,10 +787,13 @@ function val(l, date) {
   const a = (agg[l.key] || {})[date] || null, man = manual[l.id + "|" + date];
   let ispu = null, src = "none";
   const sh = shared[l.id + "|" + date];
+  const se = (sagg[l.key] || {})[date] || null, st = sTitik(l.key), sOk = !!(se && se.ispu != null && st && st.ok);
+  let fb = false;
   if (man != null && !isNaN(man)) { ispu = +man; src = "resmi"; }
   else if (sh && sh.ispu != null) { ispu = +sh.ispu; src = "berkas"; }
-  else if (a && a.ispu != null) { ispu = a.ispu; src = a.status === "forecast" ? "fc" : "model"; }
-  return (c[l.id] = { ispu, src, a, h: hOf(ispu) });
+  else if (srcMode === "sensor" && sOk) { ispu = se.ispu; src = "sensor"; }
+  else if (a && a.ispu != null) { ispu = a.ispu; src = a.status === "forecast" ? "fc" : "model"; fb = srcMode === "sensor"; }
+  return (c[l.id] = { ispu, src, a, se, sOk, fb, h: hOf(ispu) });
 }
 function series() {
   if (S) return S;
@@ -678,7 +811,11 @@ function series() {
   }
   return S;
 }
-const srcKey = s => ({ resmi: "srcResmi", berkas: "srcBerkas", fc: "srcFc", model: "srcModel" }[s]);
+const srcKey = s => ({ resmi: "srcResmi", berkas: "srcBerkas", fc: "srcFc", model: "srcModel", sensor: "srcSensor" }[s]);
+const srcLabel = v => (v.src === "none" ? "" : t(srcKey(v.src)) + (v.fb ? " " + t("srcFb") : ""));
+/* Konsentrasi yang ditampilkan: dari sensor bila mode sensor dan sensor layak, selain itu dari model */
+const kons = v => (srcMode === "sensor" && v.sOk ? { m25: v.se.m25, m10: v.se.m10, aqi: v.se.aqi, sensor: true } : { m25: (v.a || {}).m25, m10: (v.a || {}).m10, aqi: usAqi((v.a || {}).m25, (v.a || {}).m10), sensor: false });
+function setSrc(m) { srcMode = m; LS.set("pu2.src", m); Ecache = {}; S = null; renderAll(); }
 const dayStatus = d => (d < today ? "final" : d === today ? "partial" : "forecast");
 function setDate(d) { if (!dates.includes(d)) return; sel = d; renderAll(); }
 function setManual(id, date, raw) {
@@ -718,7 +855,7 @@ function drawStatus() {
   $("#tabs").style.top = $(".bar").offsetHeight + "px";
 }
 function renderAll() {
-  drawStatus();
+  drawStatus(); drawSrc();
   const has = dates.length > 0;
   $("#emptyBox").hidden = has; $("#heroBox").hidden = !has;
   $("#tren").hidden = !has; $("#lokasi").hidden = !has;
@@ -734,6 +871,23 @@ function renderAll() {
   $("#dPrev").disabled = sel === dates[0]; $("#dNext").disabled = sel === dates[dates.length - 1];
   drawMap(); drawTiles(); drawRank(); drawScrub(); drawLines(); drawComp(); drawHeat(); drawTable();
   if (detailId) drawDetail();
+}
+
+/* ---------------- PILIHAN SUMBER ANGKA ---------------- */
+const fmtDT = iso => new Intl.DateTimeFormat(loc(), { dateStyle: "medium", timeStyle: "short", timeZone: CFG.TZ.WIB }).format(new Date(iso)) + " WIB";
+function drawSrc() {
+  $("#srcSw").setAttribute("aria-label", t("srcPick"));
+  $("#srcSw").innerHTML = `<span class="lb">${esc(t("srcPick"))}</span>` +
+    ["model", "sensor"].map(m => `<button type="button" class="chipbtn" data-src="${m}" aria-pressed="${m === srcMode}">${esc(t("sw_" + m))}</button>`).join("");
+  let n;
+  if (srcMode === "model") n = esc(t("swNoteModel"));
+  else if (!sens || !sens.diperbarui) n = `<span class="err">${esc(t("swNoSens"))}</span>` + (sens && sens.galat ? " " + esc(sens.galat) : "");
+  else {
+    const cnt = dates.length ? LOK.filter(l => val(l, sel).src === "sensor").length : 0;
+    n = esc(t("swNoteSensor", { t: fmtDT(sens.diperbarui), n: cnt, N: LOK.length, km: CFG.SENSOR_MAX_KM })) +
+      (sens.galat ? ` <span class="err">${esc(t("swErr", { m: sens.galat }))}</span>` : "");
+  }
+  $("#srcNote").innerHTML = n;
 }
 
 /* ---------------- PETA ---------------- */
@@ -939,15 +1093,15 @@ function drawTable() {
   $("#locSub").textContent = t("locSub", { n: rows.length, N: LOK.length });
   let s = `<thead><tr><th>${esc(t("cLevel"))}</th><th>${esc(t("cLoc"))}</th><th>${esc(t("cWil"))}</th><th class="r">${esc(t("cIspu"))}</th><th>${esc(t("cCat"))}</th><th class="r">PM2,5</th><th class="r">PM10</th><th class="r">${esc(t("cAqi"))}</th><th>${esc(t("cBmkg"))}</th><th class="r">${esc(t("cRain"))}</th><th class="r">${esc(t("cDelta"))}</th><th class="r">${esc(t("cMan"))}</th></tr></thead><tbody>`;
   for (const { l, v } of rows) {
-    const a = v.a || {}, cat = catOf(v.ispu), bm = bmkgOf(a.m25), pv = prev ? val(l, prev).ispu : null;
+    const a = v.a || {}, k = kons(v), cat = catOf(v.ispu), bm = bmkgOf(k.m25), pv = prev ? val(l, prev).ispu : null;
     const dlt = v.ispu != null && pv != null ? v.ispu - pv : null, man = manual[l.id + "|" + sel], sh = shared[l.id + "|" + sel];
     s += `<tr data-id="${l.id}"><td class="c-h"><span class="hx ${v.h || "ND"}">${v.h || "–"}</span></td>` +
-      `<td class="nm"><b>${esc(l.nama)}</b><small>${esc(t("t_" + l.tipe))}, ${esc(l.provinsi)}</small></td>` +
+      `<td class="nm"><b>${esc(l.nama)}</b><small>${esc(t("t_" + l.tipe))}, ${esc(l.provinsi)}</small><span class="tu">${esc(titikUkur(l, v))}</span></td>` +
       `<td class="c-w">${esc(t("w_" + l.wilayah))}</td>` +
-      `<td class="r c-i"><span class="big num">${fmt(v.ispu)}</span><br><span class="src ${v.src}">${v.src === "none" ? "" : esc(t(srcKey(v.src)))}</span></td>` +
+      `<td class="r c-i"><span class="big num">${fmt(v.ispu)}</span><br><span class="src ${v.src}">${esc(srcLabel(v))}</span></td>` +
       `<td class="c-x" data-l="${esc(t("cCat"))}">${cat ? `<span class="cat ${cat}">${esc(t("k_" + cat))}</span>` : "–"}</td>` +
-      `<td class="r c-x c-d num" data-l="PM2,5 (µg/m³)">${fmt(a.m25, 1)}</td><td class="r c-x c-d num" data-l="PM10 (µg/m³)">${fmt(a.m10, 1)}</td>` +
-      `<td class="r c-x c-d num" data-l="${esc(t("cAqi"))}">${fmt(usAqi(a.m25, a.m10))}</td>` +
+      `<td class="r c-x c-d num" data-l="PM2,5 (µg/m³)">${fmt(k.m25, 1)}</td><td class="r c-x c-d num" data-l="PM10 (µg/m³)">${fmt(k.m10, 1)}</td>` +
+      `<td class="r c-x c-d num" data-l="${esc(t("cAqi"))}">${fmt(k.aqi)}</td>` +
       `<td class="c-x c-d" data-l="${esc(t("cBmkg"))}">${bm ? `<span class="cat ${bm}">${esc(t("k_" + bm))}</span>` : "–"}</td>` +
       `<td class="r c-x c-d num" data-l="${esc(t("cRain"))}">${fmt(a.rain, 1)}</td>` +
       `<td class="r c-x c-d" data-l="${esc(t("cDelta"))}">${dlt == null ? "–" : `<span class="${dlt > 0 ? "up" : dlt < 0 ? "dn" : "eq"} num">${dlt > 0 ? "+" : ""}${fmt(dlt)}</span>`}</td>` +
@@ -983,9 +1137,51 @@ function barsSVG(vals, o) {
   });
   return s + "</svg>";
 }
+/* Tabel perbandingan tiga sumber pada tanggal terpilih */
+function cmpHTML(l, v) {
+  const a = v.a || {}, se = v.se, st = sTitik(l.key), man = manual[l.id + "|" + sel], sh = shared[l.id + "|" + sel];
+  const rIspu = man != null ? man : sh ? sh.ispu : null;
+  const cell = i => i == null ? "–" : `<span class="hx ${hOf(i)}" style="margin-right:6px">${hOf(i)}</span><b class="num">${fmt(i)}</b>`;
+  let sNote, sIspu = null, sAqi = "–";
+  if (!st) sNote = t("cmpSensNone");
+  else if (!se) sNote = t("cmpSensNoDay", { k: st.kota });
+  else {
+    sIspu = se.ispu; sAqi = fmt(se.aqi);
+    sNote = t("cmpSensRead", { n: se.n, j: String(se.last.jam).padStart(2, "0") + ".00 " + l.zona, q: fmt(se.last.aqi), p: polName(se.last.main) });
+    if (!st.ok) sNote += " " + t("cmpSensFar", { d: fmt(st.jarakKm), km: CFG.SENSOR_MAX_KM });
+    if (se.ispu == null) sNote += " " + t("cmpSensNoPm");
+  }
+  const mNote = a.status ? t(a.status === "final" ? "bFinal" : a.status === "partial" ? "bPartial" : "bForecast") : t("legNd");
+  const on = x => (x === "resmi" ? (v.src === "resmi" || v.src === "berkas") : x === "sensor" ? v.src === "sensor" : (v.src === "model" || v.src === "fc")) ? ' class="on"' : "";
+  let s = `<h3>${esc(t("cmpTitle"))}</h3><p class="hint">${esc(t("cmpHint"))}</p><table class="cmp"><thead><tr><th>${esc(t("cmpSrc"))}</th><th class="r">ISPU</th><th class="r">US AQI</th><th>${esc(t("cmpNote"))}</th></tr></thead><tbody>` +
+    `<tr${on("resmi")}><td>${esc(t("cmpResmi"))}</td><td class="r">${cell(rIspu)}</td><td class="r">–</td><td>${esc(rIspu == null ? t("cmpResmiNone") : (sh && man == null ? [sh.stasiun, sh.sumber].filter(Boolean).join(", ") : t("srcResmi")))}</td></tr>` +
+    `<tr${on("sensor")}><td>${esc(t("sw_sensor"))}</td><td class="r">${cell(sIspu)}</td><td class="r num">${sAqi}</td><td>${esc(sNote)}</td></tr>` +
+    `<tr${on("model")}><td>${esc(t("sw_model"))}</td><td class="r">${cell(a.ispu)}</td><td class="r num">${fmt(usAqi(a.m25, a.m10))}</td><td>${esc(mNote)}</td></tr></tbody></table>`;
+  if (se && se.read.length > 1) s += `<p class="hint" style="margin-top:4px">${esc(t("readList"))} ${se.read.map(r => `${String(r.jam).padStart(2, "0")}.00: US AQI ${fmt(r.aqi)}${r.ispu != null ? " / ISPU " + fmt(r.ispu) : ""}`).map(esc).join(" · ")}</p>`;
+  return s;
+}
+const polName = c => ({ p2: "PM2,5", p1: "PM10", o3: "O3", n2: "NO2", s2: "SO2", co: "CO" }[c] || c || "–");
+const slug = x => String(x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const iqairUrl = m => "https://www.iqair.com/indonesia/" + (slug(m.provinsi) === slug(m.kota) ? slug(m.kota) : slug(m.provinsi) + "/" + slug(m.kota));
+/* Catatan titik pengukuran (sampling) tiap sumber untuk satu lokasi */
+function titikHTML(l) {
+  const st = sTitik(l.key), g = db && db.pts[l.key] && db.pts[l.key].g, sh = shared[l.id + "|" + sel];
+  const li = (b, sm) => `<li><b>${b}</b><small>${sm}</small></li>`;
+  let s = `<h3>${esc(t("tiTitle"))}</h3><p class="hint">${esc(t("tiHint"))}</p><ul class="titik">`;
+  s += li(esc(t("tiLok")), esc(fmtC(l.lat, l.lon)) + ". " + esc(l.catatan || t("tiLokNote")));
+  s += li(esc(t("cmpResmi")), esc((sh && sh.stasiun) || l.stasiunIspu || t("tiResmiNa")) + ". " + esc(t("tiResmiNote")));
+  if (!st) s += li(esc(t("sw_sensor")), esc(t("tiSensNone")));
+  else s += li(esc(t("sw_sensor")) + ": " + esc(st.kota + ", " + st.provinsi),
+    esc(t("tiSens", { c: st.lat != null ? fmtC(st.lat, st.lon) : "–", d: st.jarakKm == null ? "?" : fmt(st.jarakKm) })) +
+    (st.ok ? "" : ` <span class="warn">${esc(t("tiSensFar", { km: CFG.SENSOR_MAX_KM }))}</span>`) +
+    ` <a href="${esc(iqairUrl(st))}" target="_blank" rel="noopener">${esc(t("tiSensLink"))}</a>`);
+  s += li(esc(t("sw_model")), esc(g ? t("tiModel", { g: fmt(CFG.MODEL_GRID_KM), c: fmtC(g[0], g[1]), d: fmt(kmAntara(l.lat, l.lon, g[0], g[1])) }) : t("tiModelNa", { g: fmt(CFG.MODEL_GRID_KM) })));
+  return s + "</ul>";
+}
 function drawDetail() {
   const l = LOK.find(x => x.id === detailId); if (!l) return;
-  const v = val(l, sel), a = v.a || {}, h = v.h, cat = catOf(v.ispu), bm = bmkgOf(a.m25), man = manual[l.id + "|" + sel];
+  const v = val(l, sel), a = v.a || {}, k = kons(v), h = v.h, cat = catOf(v.ispu), bm = bmkgOf(k.m25), man = manual[l.id + "|" + sel];
+  const kCrit = k.sensor ? (k.m25 == null && k.m10 == null ? null : ((ispu25(k.m25) ?? -1) >= (ispu10(k.m10) ?? -1) ? "PM2.5" : "PM10")) : a.crit;
   const W = Math.min(444, window.innerWidth - 36), same = LOK.filter(x => x.key === l.key && x.id !== l.id).map(x => x.nama);
   const comp = a.wdir == null ? "" : t("compass")[Math.round(a.wdir / 45) % 8];
   const stat = (k, b) => `<div><small>${esc(k)}</small><b>${b}</b></div>`;
@@ -993,16 +1189,16 @@ function drawDetail() {
   let s = `<button class="x" type="button" id="dClose">${esc(t("close"))}</button><h2>${esc(l.nama)}</h2>` +
     `<div class="meta">${esc(t("t_" + l.tipe))}, ${esc(t("w_" + l.wilayah))}, ${esc(l.provinsi)}<br>${esc(l.alamat)}${l.catatan ? "<br>" + esc(l.catatan) : ""}</div>` +
     `<div class="headline"><span class="hx ${h || "ND"}">${h || "–"}</span><div><span class="n num">${fmt(v.ispu)}</span> ${cat ? `<span class="cat ${cat}">${esc(t("k_" + cat))}</span>` : ""}` +
-    `<small>${esc(fLong(sel))}${v.src === "none" ? "" : ", ISPU " + esc(t(srcKey(v.src)))}</small></div></div>` +
+    `<small>${esc(fLong(sel))}${v.src === "none" ? "" : ", ISPU " + esc(srcLabel(v))}</small></div></div>` +
     sceneHTML(v.ispu, h, a) + `<p class="cap">${esc(t("sceneCap"))}</p>` +
     `<div class="stats">` +
-    stat(t("mean25"), fmt(a.m25, 1) + " µg/m³") + stat(t("mean10"), fmt(a.m10, 1) + " µg/m³") +
-    stat(t("crit"), a.crit ? a.crit.replace(".", lang === "id" ? "," : ".") : "–") + stat(t("aqiEq"), fmt(usAqi(a.m25, a.m10))) +
+    stat(t("mean25") + (k.sensor ? " (IQAir)" : ""), fmt(k.m25, 1) + " µg/m³") + stat(t("mean10") + (k.sensor ? " (IQAir)" : ""), fmt(k.m10, 1) + " µg/m³") +
+    stat(t("crit"), kCrit ? kCrit.replace(".", lang === "id" ? "," : ".") : "–") + stat(t("aqiEq"), fmt(k.aqi)) +
     stat(t("bmkg"), bm ? `<span class="cat ${bm}">${esc(t("k_" + bm))}</span>` : "–") +
-    stat(t("peak"), a.peak ? `${fmt(a.peak.ispu)} (${String(a.peak.hour).padStart(2, "0")}.00 ${l.zona})` : "–") +
+    stat(t("peak") + (k.sensor ? " (model)" : ""), a.peak ? `${fmt(a.peak.ispu)} (${String(a.peak.hour).padStart(2, "0")}.00 ${l.zona})` : "–") +
     stat(t("rain"), a.rain == null ? "–" : fmt(a.rain, 1) + " mm") +
     stat(t("wind"), a.wind == null ? "–" : `${fmt(a.wind)} km/j ${esc(t("from"))} ${comp}`.replace("km/j", lang === "id" ? "km/jam" : "km/h")) +
-    `</div>`;
+    `</div>` + cmpHTML(l, v) + titikHTML(l);
   if (h) s += `<h3>${esc(t("ctlTitle", { h: h + " " + t("hn_" + h) }))}</h3><p class="hint" style="margin:6px 0 2px;font-weight:600;color:var(--ink)">${esc(t("forWorker"))}</p><ul class="ctl">${T[lang].ctl[h].w.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` +
     `<p class="hint" style="margin:8px 0 2px;font-weight:600;color:var(--ink)">${esc(t("forLead"))}</p><ul class="ctl">${T[lang].ctl[h].l.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
   if (a.hrs) s += `<h3>${esc(t("hourly"))}</h3><p class="hint">${esc(t("hourlyHint", { z: l.zona }))}</p>` + barsSVG(a.hrs, { W, H: 150, label: t("hourly"), labels: i => (i % 6 === 0 || i === 23 ? String(i).padStart(2, "0") : ""), faded: i => a.status === "forecast" || i > a.lastH, selI: -1 });
@@ -1041,14 +1237,19 @@ function drawMethod() {
 function csv(all) {
   const num = (v, d = 0) => (v == null || isNaN(v) ? "" : Number(v).toFixed(d).replace(".", ","));
   const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
-  const head = ["tanggal", "id", "lokasi", "tipe", "wilayah", "provinsi", "level", "ISPU", "sumber_ISPU", "kategori_ISPU", "PM2,5_ug_m3", "PM10_ug_m3", "parameter_kritis", "US_AQI_setara", "kategori_BMKG", "ISPU_jam_tertinggi", "jam_tertinggi", "hujan_mm", "angin_km_jam", "arah_angin_derajat", "status_data"];
+  const head = ["tanggal", "id", "lokasi", "tipe", "wilayah", "provinsi", "level", "ISPU", "sumber_ISPU", "kategori_ISPU", "PM2,5_ug_m3", "PM10_ug_m3", "parameter_kritis", "US_AQI_setara", "kategori_BMKG", "ISPU_jam_tertinggi", "jam_tertinggi", "hujan_mm", "angin_km_jam", "arah_angin_derajat", "status_data", "sumber_konsentrasi", "ISPU_setara_model", "ISPU_setara_sensor_IQAir", "US_AQI_IQAir_terakhir", "jumlah_bacaan_IQAir", "kota_IQAir", "jarak_kota_IQAir_km", "titik_grid_model", "jarak_grid_model_km", "catatan_titik_ukur"];
   const out = [head.map(q).join(";")];
+  const lang0 = lang; lang = "id";   // isi CSV selalu berbahasa Indonesia
   for (const d of all ? dates : [sel]) for (const l of LOK) {
-    const v = val(l, d), a = v.a || {};
-    out.push([d, l.id, q(l.nama), q(T.id["t_" + l.tipe]), q(T.id["w_" + l.wilayah]), q(l.provinsi), v.h || "", num(v.ispu), v.src === "resmi" ? "resmi (manual)" : v.src === "berkas" ? "resmi (berkas bersama)" : v.src === "none" ? "" : "setara (model)",
-      q(v.ispu == null ? "" : T.id["k_" + catOf(v.ispu)]), num(a.m25, 1), num(a.m10, 1), q(a.crit ? a.crit.replace(".", ",") : ""), num(usAqi(a.m25, a.m10)), q(a.m25 == null ? "" : T.id["k_" + bmkgOf(a.m25)]),
-      num(a.peak && a.peak.ispu), a.peak ? String(a.peak.hour).padStart(2, "0") + ".00 " + l.zona : "", num(a.rain, 1), num(a.wind, 1), num(a.wdir), a.status ? { final: "24 jam", partial: "sementara", forecast: "prakiraan" }[a.status] : ""].join(";"));
+    const v = val(l, d), a = v.a || {}, k = kons(v), se = v.se, st = sTitik(l.key), g = db && db.pts[l.key] && db.pts[l.key].g, s0 = sel;
+    sel = d; const tu = titikUkur(l, v); sel = s0;
+    out.push([d, l.id, q(l.nama), q(T.id["t_" + l.tipe]), q(T.id["w_" + l.wilayah]), q(l.provinsi), v.h || "", num(v.ispu), v.src === "resmi" ? "resmi (manual)" : v.src === "berkas" ? "resmi (berkas bersama)" : v.src === "sensor" ? "setara (sensor IQAir)" : v.src === "none" ? "" : v.fb ? "setara (model, sensor tidak ada)" : "setara (model)",
+      q(v.ispu == null ? "" : T.id["k_" + catOf(v.ispu)]), num(k.m25, 1), num(k.m10, 1), q(a.crit ? a.crit.replace(".", ",") : ""), num(k.aqi), q(k.m25 == null ? "" : T.id["k_" + bmkgOf(k.m25)]),
+      num(a.peak && a.peak.ispu), a.peak ? String(a.peak.hour).padStart(2, "0") + ".00 " + l.zona : "", num(a.rain, 1), num(a.wind, 1), num(a.wdir), a.status ? { final: "24 jam", partial: "sementara", forecast: "prakiraan" }[a.status] : "",
+      k.sensor ? "sensor IQAir" : "model", num(a.ispu), num(se && se.ispu), num(se && se.last.aqi), se ? se.n : "", q(st ? st.kota + ", " + st.provinsi : ""), num(st && st.jarakKm, 1),
+      q(g ? num(g[0], 3) + " / " + num(g[1], 3) : ""), num(g ? kmAntara(l.lat, l.lon, g[0], g[1]) : null, 1), q(tu)].join(";"));
   }
+  lang = lang0;
   const blob = new Blob(["\ufeff" + out.join("\r\n")], { type: "text/csv;charset=utf-8" }), u = URL.createObjectURL(blob), el = document.createElement("a");
   el.href = u; el.download = all ? `pantau-udara_${dates[0]}_sd_${dates[dates.length - 1]}.csv` : `pantau-udara_${sel}.csv`;
   document.body.appendChild(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000);
@@ -1076,6 +1277,7 @@ function wire() {
   $("#dToday").onclick = () => setDate(dates.includes(today) ? today : dates[dates.length - 1]);
   $("#dPick").onchange = e => { const d = e.target.value; if (dates.includes(d)) setDate(d); else e.target.value = sel; };
   $("#langBox").onclick = e => { const b = e.target.closest("[data-lang]"); if (!b) return; lang = b.dataset.lang; LS.set("pu2.lang", lang); applyLang(); renderAll(); };
+  $("#srcSw").onclick = e => { const b = e.target.closest("[data-src]"); if (b && b.dataset.src !== srcMode) setSrc(b.dataset.src); };
   $("#status").addEventListener("change", e => { if (e.target.id === "winSel") { win = +e.target.value; LS.set("pu2.win", win); if (navigator.onLine) pull(); } });
   $("#viewBtns").onclick = e => {
     const b = e.target.closest("[data-v]");
@@ -1123,6 +1325,7 @@ async function init() {
     const r = await fetch("ispu-resmi.json", { cache: "no-cache" });
     if (r.ok) for (const x of ((await r.json()).data || [])) if (x && x.id && x.tanggal && x.ispu != null && !isNaN(+x.ispu)) shared[x.id + "|" + x.tanggal] = { ...x, ispu: Math.round(+x.ispu) };
   } catch (e) { /* berkas bersama bersifat opsional */ }
+  await loadSensor(true);
   const m = new Map(); LOK.forEach(l => { if (!m.has(l.key)) m.set(l.key, { key: l.key, lat: l.lat, lon: l.lon, tz: l.tz }); });
   PTS = [...m.values()];
   const saved = LS.get("pu2.db", null);
